@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useAccount } from 'wagmi';
 
 export default function DelegationManager({ smartAccount }) {
+  const { address } = useAccount();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [delegations, setDelegations] = useState([]);
@@ -11,6 +13,28 @@ export default function DelegationManager({ smartAccount }) {
     allowedPools: [],
     expiryHours: '24',
   });
+
+  // Fetch existing delegations on mount
+  useEffect(() => {
+    if (address) {
+      fetchDelegations();
+    }
+  }, [address]);
+
+  const fetchDelegations = async () => {
+    try {
+      console.log('🔄 Fetching existing delegations for address:', address);
+      const response = await fetch(`http://localhost:3002/api/smart-account/delegations/${address}`);
+      if (response.ok) {
+        const result = await response.json();
+        console.log('✅ Existing delegations:', result.delegations);
+        console.log('🔍 Total delegations found:', result.delegations?.length || 0);
+        setDelegations(result.delegations || []);
+      }
+    } catch (err) {
+      console.error('❌ Error fetching delegations:', err);
+    }
+  };
 
   const handleCreateDelegation = async (e) => {
     e.preventDefault();
@@ -31,7 +55,7 @@ export default function DelegationManager({ smartAccount }) {
           authority: 'yield-optimization',
           maxAmount: formData.maxAmount,
           expiryHours: formData.expiryHours,
-          userAddress: smartAccount?.address || '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b'
+          userAddress: address || smartAccount?.address || '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b'
         }),
       });
       
@@ -66,7 +90,8 @@ export default function DelegationManager({ smartAccount }) {
         status: 'active',
       };
 
-      setDelegations([...delegations, newDelegation]);
+      // Refresh delegations from backend instead of local state
+      await fetchDelegations();
       setShowCreateForm(false);
       setFormData({
         delegate: '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b',
@@ -104,11 +129,8 @@ export default function DelegationManager({ smartAccount }) {
       
       console.log('✅ Delegation revoked via API:', txHash);
       
-      setDelegations(delegations.map(d => 
-        d.id === delegationId 
-          ? { ...d, status: 'revoked', revokedAt: new Date().toISOString(), revokeTxHash: txHash }
-          : d
-      ));
+      // Refresh delegations from backend
+      await fetchDelegations();
     } catch (err) {
       console.error('Delegation revocation failed:', err);
       setError(err.message);

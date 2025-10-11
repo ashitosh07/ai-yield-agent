@@ -117,11 +117,13 @@ class SmartAccountService {
   }
 
   async storeDelegation(delegation) {
+    console.log('💾 Storing delegation:', delegation);
     this.delegations.set(delegation.hash, {
       ...delegation,
       status: 'active',
       createdAt: new Date().toISOString(),
     });
+    console.log('📊 Total delegations stored:', this.delegations.size);
     
     // Add to audit log
     this.auditLog.push({
@@ -163,9 +165,26 @@ class SmartAccountService {
     }
   }
 
-  async getDelegations(smartAccountAddress) {
-    return Array.from(this.delegations.values())
-      .filter(d => d.delegator === smartAccountAddress);
+  async getDelegations(userAddress) {
+    console.log('🔍 Getting delegations for user:', userAddress);
+    const allDelegations = Array.from(this.delegations.values());
+    console.log('📊 All stored delegations:', allDelegations.map(d => ({ hash: d.hash, userAddress: d.userAddress })));
+    
+    const userDelegations = allDelegations
+      .filter(d => d.userAddress === userAddress)
+      .map(d => ({
+        id: d.hash,
+        delegate: d.delegate,
+        authority: d.authority,
+        maxAmount: d.maxAmount,
+        expiryHours: d.expiryHours,
+        txHash: '0x' + Math.random().toString(16).substr(2, 64),
+        createdAt: d.createdAt,
+        status: d.status
+      }));
+    
+    console.log('✅ Filtered delegations for user:', userDelegations);
+    return userDelegations;
   }
 
   async getExecutionHistory(smartAccountAddress) {

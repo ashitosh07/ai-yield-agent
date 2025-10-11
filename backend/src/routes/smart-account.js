@@ -22,6 +22,13 @@ router.post('/execute', async (req, res) => {
 // Get delegations for Smart Account
 router.get('/delegations/:address', async (req, res) => {
   try {
+    // Prevent caching
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
+    
     const smartAccountService = getSmartAccountService(req);
     const delegations = await smartAccountService.getDelegations(req.params.address);
     res.json({ success: true, delegations });
