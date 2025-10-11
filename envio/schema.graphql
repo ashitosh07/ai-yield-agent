@@ -1,0 +1,78 @@
+type Pool @entity {
+  id: ID!
+  address: String!
+  token0: String!
+  token1: String!
+  name: String!
+  reserve0: BigInt!
+  reserve1: BigInt!
+  totalSupply: BigInt!
+  apy: Float!
+  tvlUSD: Float!
+  volumeUSD24h: Float!
+  feesUSD24h: Float!
+  riskScore: Float!
+  lastUpdated: BigInt!
+  syncEvents: [SyncEvent!]! @derivedFrom(field: "pool")
+  swapEvents: [SwapEvent!]! @derivedFrom(field: "pool")
+}
+
+type SyncEvent @entity {
+  id: ID!
+  pool: Pool!
+  reserve0: BigInt!
+  reserve1: BigInt!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: String!
+}
+
+type SwapEvent @entity {
+  id: ID!
+  pool: Pool!
+  sender: String!
+  amount0In: BigInt!
+  amount1In: BigInt!
+  amount0Out: BigInt!
+  amount1Out: BigInt!
+  to: String!
+  volumeUSD: Float!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+  transactionHash: String!
+}
+
+type UserPosition @entity {
+  id: ID!
+  user: String!
+  pool: Pool!
+  balance: BigInt!
+  valueUSD: Float!
+  lastUpdated: BigInt!
+}
+
+type YieldMetrics @entity {
+  id: ID!
+  pool: Pool!
+  date: String!
+  apy: Float!
+  tvlUSD: Float!
+  volumeUSD: Float!
+  feesUSD: Float!
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+}
+
+type AIAction @entity {
+  id: ID!
+  user: String!
+  fromPool: Pool
+  toPool: Pool
+  amount: BigInt!
+  confidence: Float!
+  rationale: String!
+  status: String!
+  txHash: String
+  blockNumber: BigInt!
+  blockTimestamp: BigInt!
+}

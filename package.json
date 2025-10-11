@@ -1,0 +1,16 @@
+{
+  "name": "ai-yield-agent",
+  "version": "1.0.0",
+  "description": "AI-powered yield optimization with delegated execution",
+  "scripts": {
+    "dev": "concurrently \"npm run frontend\" \"npm run backend\" \"npm run agent\"",
+    "frontend": "cd frontend && npm run dev",
+    "backend": "cd backend && npm start",
+    "agent": "cd agent && python main.py",
+    "build": "cd frontend && npm run build",
+    "test": "jest"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

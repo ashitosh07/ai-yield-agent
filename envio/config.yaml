@@ -1,0 +1,36 @@
+name: ai-yield-agent-indexer
+description: AI Yield Agent - Real-time DeFi pool indexing for autonomous yield optimization
+
+networks:
+  - id: 41454
+    name: monad-testnet
+    rpc_config:
+      url: https://testnet-rpc.monad.xyz
+    start_block: 0
+    end_block: latest
+
+contracts:
+  - name: UniswapV2Pool
+    handler: src/EventHandlers.ts
+    events:
+      - event: Sync(uint112 reserve0, uint112 reserve1)
+      - event: Swap(address indexed sender, uint256 amount0In, uint256 amount1In, uint256 amount0Out, uint256 amount1Out, address indexed to)
+      - event: Mint(address indexed sender, uint256 amount0, uint256 amount1)
+      - event: Burn(address indexed sender, uint256 amount0, uint256 amount1, address indexed to)
+    networks:
+      - id: 41454
+        address: 
+          - "0x1234567890123456789012345678901234567890"
+          - "0x2345678901234567890123456789012345678901"
+          - "0x3456789012345678901234567890123456789012"
+
+  - name: ERC20
+    handler: src/EventHandlers.ts
+    events:
+      - event: Transfer(address indexed from, address indexed to, uint256 value)
+    networks:
+      - id: 41454
+        address:
+          - "0x4567890123456789012345678901234567890123"
+          - "0x5678901234567890123456789012345678901234"
+          - "0x6789012345678901234567890123456789012345"

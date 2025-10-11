@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ai_yield_agent
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  backend:
+    build: ../backend
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/ai_yield_agent
+      ENVIO_API_KEY: ${ENVIO_API_KEY}
+      FARCASTER_API_KEY: ${FARCASTER_API_KEY}
+    depends_on:
+      - postgres
+
+  agent:
+    build: ../agent
+    ports:
+      - "3002:3002"
+    environment:
+      MONAD_RPC_URL: ${MONAD_RPC_URL}
+      PRIVATE_KEY: ${PRIVATE_KEY}
+      CONFIDENCE_THRESHOLD: ${CONFIDENCE_THRESHOLD}
+    depends_on:
+      - backend
+
+  frontend:
+    build: ../frontend
+    ports:
+      - "3003:3003"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:3001
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
