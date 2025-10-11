@@ -25,13 +25,7 @@ async function simplePoolsRoutes(fastify, options) {
     }
   ];
 
-  fastify.get('/api/pools/real-time', async (request, reply) => {
-    reply.send({
-      success: true,
-      data: { pools: mockPools },
-      timestamp: new Date().toISOString()
-    });
-  });
+  // Removed duplicate /api/pools/real-time route - now handled by envio-routes.js
 
   fastify.get('/api/pools/analytics', async (request, reply) => {
     reply.send({

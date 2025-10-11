@@ -54,7 +54,7 @@ timeout /t 3 /nobreak >nul
 
 REM Start Advanced Farcaster Mini App
 echo Starting Advanced Farcaster Mini App...
-start "Farcaster App" cmd /k "cd farcaster && node advanced-server.js"
+start "Farcaster App" cmd /k "cd farcaster && npm start"
 timeout /t 3 /nobreak >nul
 
 REM Start Frontend
@@ -70,7 +70,7 @@ echo.
 echo 🌐 Frontend:           http://localhost:3000
 echo 🔧 Backend API:        http://localhost:3002
 echo 🤖 AI Agent:           http://localhost:3003
-echo 🎭 Farcaster Mini App: http://localhost:3004
+echo 🎭 Farcaster Mini App: http://localhost:3006
 echo.
 echo 📊 Advanced Features:
 echo   ✅ Real-time Envio HyperSync integration
@@ -84,12 +84,12 @@ echo.
 echo 🔍 Health Checks:
 echo   Backend:   http://localhost:3002/api/pools/health
 echo   AI Agent:  http://localhost:3003/status
-echo   Farcaster: http://localhost:3004/health
+echo   Farcaster: http://localhost:3006/health
 echo.
 echo 📱 Farcaster Frames:
-echo   Portfolio: http://localhost:3004/frame/portfolio/[address]
-echo   Delegate:  http://localhost:3004/frame/delegate
-echo   Approve:   http://localhost:3004/frame/approve/[actionId]
+echo   Portfolio: http://localhost:3006/frame/portfolio/[address]
+echo   Delegate:  http://localhost:3006/frame/delegate
+echo   Approve:   http://localhost:3006/frame/approve/[actionId]
 echo.
 echo ⚡ Real-time Features:
 echo   WebSocket: ws://localhost:3002/api/pools/ws

@@ -7,7 +7,7 @@ const app = express();
 app.use(express.json());
 app.use(express.static('public'));
 
-const PORT = process.env.PORT || 3004;
+const PORT = process.env.PORT || 3006;
 const BASE_URL = process.env.BASE_URL || `http://localhost:${PORT}`;
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3002';
 

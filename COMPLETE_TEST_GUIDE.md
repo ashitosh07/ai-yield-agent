@@ -11,7 +11,7 @@ start_all.bat
 # - Backend (Port 3002)
 # - AI Agent (Port 3003) 
 # - Frontend (Port 3000)
-# - Farcaster Mini App (Port 3004)
+# - Farcaster Mini App (Port 3006)
 ```
 
 ### 2. Open Main Application
@@ -74,21 +74,21 @@ dir envio\src\EventHandlers.ts
 ### ✅ **Frame Testing**
 ```bash
 # Test Portfolio Frame
-http://localhost:3004/frame/portfolio/0xfB0A5Ebf31A15Ee3cD51080F1bCAC39Cd676343f
+http://localhost:3006/frame/portfolio/0xfB0A5Ebf31A15Ee3cD51080F1bCAC39Cd676343f
 
 # Test Delegation Frame
-http://localhost:3004/frame/delegate
+http://localhost:3006/frame/delegate
 
 # Test Action Approval Frame
-http://localhost:3004/frame/approve/demo-123
+http://localhost:3006/frame/approve/demo-123
 ```
 
 ### ✅ **Image Generation Test**
 ```bash
 # Test dynamic image APIs
-curl -I http://localhost:3004/api/frame/portfolio-image/0xfB0A5Ebf31A15Ee3cD51080F1bCAC39Cd676343f
-curl -I http://localhost:3004/api/frame/action-image/demo-123
-curl -I http://localhost:3004/api/frame/delegate-image
+curl -I http://localhost:3006/api/frame/portfolio-image/0xfB0A5Ebf31A15Ee3cD51080F1bCAC39Cd676343f
+curl -I http://localhost:3006/api/frame/action-image/demo-123
+curl -I http://localhost:3006/api/frame/delegate-image
 ```
 
 ### ✅ **Frame Validation Test**
@@ -198,7 +198,7 @@ curl -X POST http://localhost:3003/analyze \
 netstat -an | findstr :3000
 netstat -an | findstr :3002
 netstat -an | findstr :3003
-netstat -an | findstr :3004
+netstat -an | findstr :3006
 
 # Service not starting
 # Check individual terminal windows opened by start_all.bat

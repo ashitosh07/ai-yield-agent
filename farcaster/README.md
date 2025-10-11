@@ -102,8 +102,8 @@ npm install
 npm start
 
 # Access frames at:
-# http://localhost:3004/frame/portfolio/[address]
-# http://localhost:3004/frame/delegate
+# http://localhost:3006/frame/portfolio/[address]
+# http://localhost:3006/frame/delegate
 ```
 
 ## 🔄 Frame Flow Examples

@@ -11,14 +11,14 @@ start_all.bat
 cd backend && npm start     # Port 3002
 cd agent && python main.py # Port 3003  
 cd frontend && npm run dev  # Port 3000
-cd farcaster && npm start   # Port 3004
+cd farcaster && npm start   # Port 3006
 ```
 
 ### 2. Test Frame URLs
 
 #### Portfolio Frame
 ```
-http://localhost:3004/frame/portfolio/0xfB0A5Ebf31A15Ee3cD51080F1bCAC39Cd676343f
+http://localhost:3006/frame/portfolio/0xfB0A5Ebf31A15Ee3cD51080F1bCAC39Cd676343f
 ```
 - Shows AI-optimized portfolio metrics
 - Interactive buttons: Refresh, Rebalance, Settings
@@ -26,7 +26,7 @@ http://localhost:3004/frame/portfolio/0xfB0A5Ebf31A15Ee3cD51080F1bCAC39Cd676343f
 
 #### Delegation Frame  
 ```
-http://localhost:3004/frame/delegate
+http://localhost:3006/frame/delegate
 ```
 - Delegation setup interface
 - Security features explanation
@@ -34,7 +34,7 @@ http://localhost:3004/frame/delegate
 
 #### Action Approval Frame
 ```
-http://localhost:3004/frame/approve/demo-123
+http://localhost:3006/frame/approve/demo-123
 ```
 - AI rebalance proposal display
 - Confidence scoring (87%)
@@ -85,11 +85,11 @@ curl http://localhost:3002/api/pools
 #### Frame Image APIs:
 ```bash
 # Test image generation
-curl http://localhost:3004/api/frame/portfolio-image/0xfB0A5Ebf31A15Ee3cD51080F1bCAC39Cd676343f
+curl http://localhost:3006/api/frame/portfolio-image/0xfB0A5Ebf31A15Ee3cD51080F1bCAC39Cd676343f
 
-curl http://localhost:3004/api/frame/action-image/demo-123
+curl http://localhost:3006/api/frame/action-image/demo-123
 
-curl http://localhost:3004/api/frame/delegate-image
+curl http://localhost:3006/api/frame/delegate-image
 ```
 
 ## 🎯 Expected Results
@@ -133,14 +133,14 @@ curl http://localhost:3004/api/frame/delegate-image
 ### Debug Commands:
 ```bash
 # Check service status
-netstat -an | findstr :3004
+netstat -an | findstr :3006
 netstat -an | findstr :3002
 
 # Test frame HTML
-curl http://localhost:3004/frame/delegate
+curl http://localhost:3006/frame/delegate
 
 # Test image generation
-curl -I http://localhost:3004/api/frame/delegate-image
+curl -I http://localhost:3006/api/frame/delegate-image
 ```
 
 ## 📱 Farcaster Client Testing

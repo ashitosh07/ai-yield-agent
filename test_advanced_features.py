@@ -15,7 +15,7 @@ class AdvancedFeatureTester:
     def __init__(self):
         self.backend_url = "http://localhost:3002"
         self.ai_agent_url = "http://localhost:3003"
-        self.farcaster_url = "http://localhost:3004"
+        self.farcaster_url = "http://localhost:3006"
         self.frontend_url = "http://localhost:3000"
         
         self.test_results = []

@@ -16,15 +16,15 @@ export function FarcasterIntegration() {
       
       switch (type) {
         case 'portfolio':
-          frameUrl = `http://localhost:3004/frame/portfolio/${address}`;
+          frameUrl = `http://localhost:3006/frame/portfolio/${address}`;
           castText = '📊 Check out my AI-optimized DeFi portfolio! Real-time yield optimization on Monad 🤖';
           break;
         case 'delegation':
-          frameUrl = `http://localhost:3004/frame/delegate`;
+          frameUrl = `http://localhost:3006/frame/delegate`;
           castText = '🔐 Just created a secure delegation for AI yield optimization! Autonomous DeFi is here 🚀';
           break;
         case 'action':
-          frameUrl = `http://localhost:3004/frame/approve/${data?.actionId || 'demo'}`;
+          frameUrl = `http://localhost:3006/frame/approve/${data?.actionId || 'demo'}`;
           castText = `🤖 AI found a ${data?.improvement || '4.2'}% APY improvement opportunity! Should I execute? 🎯`;
           break;
       }
@@ -100,7 +100,7 @@ export function FarcasterIntegration() {
           <h4 className="text-white font-semibold mb-2">🧪 Test Frames</h4>
           <div className="space-y-2">
             <a
-              href={`http://localhost:3004/frame/portfolio/${address}`}
+              href={`http://localhost:3006/frame/portfolio/${address}`}
               target="_blank"
               rel="noopener noreferrer"
               className="block text-blue-400 hover:text-blue-300 text-sm"
@@ -108,7 +108,7 @@ export function FarcasterIntegration() {
               📊 Portfolio Frame →
             </a>
             <a
-              href="http://localhost:3004/frame/delegate"
+              href="http://localhost:3006/frame/delegate"
               target="_blank"
               rel="noopener noreferrer"
               className="block text-blue-400 hover:text-blue-300 text-sm"
@@ -116,7 +116,7 @@ export function FarcasterIntegration() {
               🔐 Delegation Frame →
             </a>
             <a
-              href="http://localhost:3004/frame/approve/demo-123"
+              href="http://localhost:3006/frame/approve/demo-123"
               target="_blank"
               rel="noopener noreferrer"
               className="block text-blue-400 hover:text-blue-300 text-sm"

@@ -2,10 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Force dark theme */
+html, body {
+  background-color: #111827 !important;
+  color: white !important;
+}
+
 .glass {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.05) !important;
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
 
 .gradient-border {
@@ -24,4 +30,22 @@
     linear-gradient(rgba(255,255,255,0.1) 1px, transparent 1px),
     linear-gradient(90deg, rgba(255,255,255,0.1) 1px, transparent 1px);
   background-size: 20px 20px;
+}
+
+/* Ensure all text is visible */
+* {
+  color: inherit;
+}
+
+/* Fix white backgrounds */
+.bg-white {
+  background-color: #1f2937 !important;
+}
+
+.text-gray-900 {
+  color: #f9fafb !important;
+}
+
+.border-gray-200 {
+  border-color: #374151 !important;
 }

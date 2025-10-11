@@ -35,18 +35,34 @@ export function AuditLog() {
 
   const fetchAuditLog = async () => {
     try {
+      console.log('📋 Fetching real audit data for:', address);
       const response = await fetch(`http://localhost:3002/api/audit/${address}`);
       const data = await response.json();
       
       if (data.success) {
+        console.log('✅ Real audit data received:', data.data);
         setAuditEntries(data.data);
+      } else {
+        console.warn('⚠️ API returned error:', data.error);
+        setAuditEntries([]);
       }
     } catch (error) {
-      console.error('Error fetching audit log:', error);
-      // Use mock data for demo
-      setAuditEntries(getMockAuditData());
+      console.error('❌ Error fetching audit log:', error);
+      setAuditEntries([]);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const simulateAIAction = async () => {
+    try {
+      await fetch(`http://localhost:3002/api/audit/${address}/simulate`, {
+        method: 'POST'
+      });
+      // Refresh audit log after simulation
+      fetchAuditLog();
+    } catch (error) {
+      console.error('Error simulating AI action:', error);
     }
   };
 
@@ -187,8 +203,15 @@ export function AuditLog() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center space-y-4 md:space-y-0">
         <div>
           <h2 className="text-2xl font-bold text-white">Audit Log</h2>
-          <p className="text-gray-400 mt-1">Complete transparency of all AI agent actions</p>
+          <p className="text-gray-400 mt-1">Real-time tracking of all delegation and AI actions</p>
         </div>
+        
+        <button
+          onClick={simulateAIAction}
+          className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg transition-colors"
+        >
+          🤖 Simulate AI Action
+        </button>
         
         <div className="flex space-x-4">
           {/* Filter */}
@@ -353,10 +376,16 @@ export function AuditLog() {
           )) : (
             <div className="text-center py-12">
               <div className="text-6xl mb-4">📋</div>
-              <div className="text-xl text-white mb-2">No Audit Entries</div>
-              <div className="text-gray-400">
-                AI agent actions will appear here once delegations are active
+              <div className="text-xl text-white mb-2">No Audit Entries Yet</div>
+              <div className="text-gray-400 mb-4">
+                Create delegations or simulate AI actions to see audit entries
               </div>
+              <button
+                onClick={simulateAIAction}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors"
+              >
+                🤖 Simulate AI Action
+              </button>
             </div>
           )}
         </div>

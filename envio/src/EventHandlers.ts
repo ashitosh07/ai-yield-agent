@@ -1,278 +1,260 @@
 import {
   Pool,
-  SyncEvent,
-  SwapEvent,
-  UserPosition,
-  YieldMetrics,
+  Swap,
+  PoolDayData,
   AIAction,
+  User,
+  Factory,
+  ActionType,
+  ActionStatus,
 } from "generated";
+import { BigDecimal } from "../generated/src/BigDecimal.js";
 
-// Pool addresses mapping
-const POOL_INFO = {
-  "0x1234567890123456789012345678901234567890": {
-    name: "USDC/ETH",
-    token0: "0x4567890123456789012345678901234567890123",
-    token1: "0x6789012345678901234567890123456789012345"
-  },
-  "0x2345678901234567890123456789012345678901": {
-    name: "DAI/USDC", 
-    token0: "0x5678901234567890123456789012345678901234",
-    token1: "0x4567890123456789012345678901234567890123"
-  },
-  "0x3456789012345678901234567890123456789012": {
-    name: "WETH/USDT",
-    token0: "0x6789012345678901234567890123456789012345",
-    token1: "0x7890123456789012345678901234567890123456"
+// Pool creation handler
+UniswapV2Factory.PairCreated.handler(async ({ event, context }) => {
+  const poolId = event.params.pair.toLowerCase();
+  const factoryId = event.srcAddress.toLowerCase();
+  
+  // Get or create factory
+  let factory = await context.Factory.get(factoryId);
+  if (!factory) {
+    factory = {
+      id: factoryId,
+      poolCount: 0n,
+      totalVolumeUSD: new BigDecimal("0"),
+      totalFeesUSD: new BigDecimal("0"),
+    };
   }
-};
-
-// Calculate APY from reserves and fees
-function calculateAPY(reserve0: bigint, reserve1: bigint, feesUSD24h: number): number {
-  const tvlUSD = calculateTVL(reserve0, reserve1);
-  if (tvlUSD === 0) return 0;
   
-  const dailyYield = feesUSD24h / tvlUSD;
-  const apy = (Math.pow(1 + dailyYield, 365) - 1) * 100;
+  // Update factory pool count
+  factory.poolCount = factory.poolCount + 1n;
+  context.Factory.set(factory);
   
-  return Math.min(apy, 1000); // Cap at 1000%
-}
-
-// Calculate TVL in USD
-function calculateTVL(reserve0: bigint, reserve1: bigint): number {
-  // Mock price calculation - in production would use oracle
-  const ethPrice = 2000;
-  const reserve0USD = Number(reserve0) / 1e18 * ethPrice;
-  const reserve1USD = Number(reserve1) / 1e18 * ethPrice;
-  
-  return reserve0USD + reserve1USD;
-}
-
-// Calculate risk score
-function calculateRiskScore(tvlUSD: number, apy: number): number {
-  let risk = 0;
-  
-  if (tvlUSD < 100000) risk += 0.4;
-  else if (tvlUSD < 1000000) risk += 0.2;
-  else risk += 0.1;
-  
-  if (apy > 20) risk += 0.3;
-  else if (apy > 10) risk += 0.1;
-  
-  return Math.min(risk, 1.0);
-}
-
-// Sync event handler - updates pool reserves and metrics
-UniswapV2Pool.Sync.handler(async ({ event, context }) => {
-  const poolAddress = event.srcAddress.toLowerCase();
-  const poolInfo = POOL_INFO[poolAddress];
-  
-  if (!poolInfo) return;
-
-  // Create or update pool entity
-  const pool = await context.Pool.get(poolAddress) || {
-    id: poolAddress,
-    address: poolAddress,
-    token0: poolInfo.token0,
-    token1: poolInfo.token1,
-    name: poolInfo.name,
+  // Create new pool
+  const pool = {
+    id: poolId,
+    factory_id: factoryId,
+    token0: event.params.token0.toLowerCase(),
+    token1: event.params.token1.toLowerCase(),
+    token0Symbol: await getTokenSymbol(event.params.token0),
+    token1Symbol: await getTokenSymbol(event.params.token1),
+    reserve0: 0n,
+    reserve1: 0n,
     totalSupply: 0n,
-    volumeUSD24h: 0,
-    feesUSD24h: 0,
+    txCount: 0n,
+    createdAtTimestamp: BigInt(event.block.timestamp),
+    createdAtBlockNumber: BigInt(event.block.number),
+    lastSyncTimestamp: BigInt(event.block.timestamp),
+    lastSyncBlockNumber: BigInt(event.block.number),
+    volumeUSD: new BigDecimal("0"),
+    feesUSD: new BigDecimal("0"),
+    apy: new BigDecimal("0"),
+    tvlUSD: new BigDecimal("0"),
+    isActive: true,
   };
 
-  // Update reserves
-  pool.reserve0 = event.params.reserve0;
-  pool.reserve1 = event.params.reserve1;
-  pool.lastUpdated = event.block.timestamp;
-
-  // Calculate metrics
-  const tvlUSD = calculateTVL(pool.reserve0, pool.reserve1);
-  const apy = calculateAPY(pool.reserve0, pool.reserve1, pool.feesUSD24h);
-  const riskScore = calculateRiskScore(tvlUSD, apy);
-
-  pool.tvlUSD = tvlUSD;
-  pool.apy = apy;
-  pool.riskScore = riskScore;
-
-  await context.Pool.set(pool);
-
-  // Create sync event record
-  const syncEvent: SyncEvent = {
-    id: `${event.transaction.hash}-${event.logIndex}`,
-    pool_id: poolAddress,
-    reserve0: event.params.reserve0,
-    reserve1: event.params.reserve1,
-    blockNumber: event.block.number,
-    blockTimestamp: event.block.timestamp,
-    transactionHash: event.transaction.hash,
+  context.Pool.set(pool);
+  
+  // Create AI action for new pool
+  const aiActionId = `${poolId}-pool-created-${event.block.timestamp}`;
+  const aiAction = {
+    id: aiActionId,
+    pool_id: poolId,
+    actionType: "POOL_CREATED" as ActionType,
+    status: "PENDING" as ActionStatus,
+    amount: new BigDecimal("0"),
+    confidence: new BigDecimal("0.95"),
+    rationale: `New ${pool.token0Symbol}/${pool.token1Symbol} pool created - monitoring for yield opportunities`,
+    timestamp: BigInt(event.block.timestamp),
+    blockNumber: BigInt(event.block.number),
+    userAddress: event.params.token0, // Placeholder
   };
-
-  await context.SyncEvent.set(syncEvent);
-
-  // Trigger AI analysis webhook if significant change
-  const prevMetrics = await context.YieldMetrics.get(`${poolAddress}-${getDateString(event.block.timestamp)}`);
-  if (!prevMetrics || Math.abs(apy - prevMetrics.apy) > 1.0) {
-    await triggerAIAnalysis(poolAddress, prevMetrics?.apy || 0, apy, event.block.timestamp);
+  
+  context.AIAction.set(aiAction);
+  
+  // Trigger AI analysis webhook
+  if (!context.isPreload) {
+    await triggerAIAnalysis(poolId, "POOL_CREATED", event.block.timestamp);
   }
-
-  // Update daily metrics
-  await updateDailyMetrics(context, poolAddress, pool, event.block);
 });
 
-// Swap event handler - tracks volume and fees
-UniswapV2Pool.Swap.handler(async ({ event, context }) => {
-  const poolAddress = event.srcAddress.toLowerCase();
-  const poolInfo = POOL_INFO[poolAddress];
+// Swap event handler
+UniswapV2Pair.Swap.handler(async ({ event, context }) => {
+  const poolId = event.srcAddress.toLowerCase();
+  const swapId = `${event.transaction.hash}-${event.logIndex}`;
   
-  if (!poolInfo) return;
+  // Load existing pool with preload optimization
+  const pool = await context.Pool.getOrThrow(poolId, `Pool ${poolId} should exist`);
 
-  // Calculate swap volume in USD
-  const amount0 = event.params.amount0In > 0n ? event.params.amount0In : event.params.amount0Out;
-  const amount1 = event.params.amount1In > 0n ? event.params.amount1In : event.params.amount1Out;
-  const volumeUSD = calculateSwapVolumeUSD(amount0, amount1);
+  // Calculate volume in USD using BigDecimal for precision
+  const volumeUSD = calculateVolumeUSD(
+    event.params.amount0In,
+    event.params.amount1In,
+    event.params.amount0Out,
+    event.params.amount1Out
+  );
 
-  // Create swap event record
-  const swapEvent: SwapEvent = {
-    id: `${event.transaction.hash}-${event.logIndex}`,
-    pool_id: poolAddress,
-    sender: event.params.sender,
+  // Create swap entity with proper types
+  const swap = {
+    id: swapId,
+    pool_id: poolId,
+    sender: event.params.sender.toLowerCase(),
+    recipient: event.params.to.toLowerCase(),
     amount0In: event.params.amount0In,
     amount1In: event.params.amount1In,
     amount0Out: event.params.amount0Out,
     amount1Out: event.params.amount1Out,
-    to: event.params.to,
     volumeUSD,
-    blockNumber: event.block.number,
-    blockTimestamp: event.block.timestamp,
-    transactionHash: event.transaction.hash,
+    timestamp: BigInt(event.block.timestamp),
+    blockNumber: BigInt(event.block.number),
+    txHash: event.transaction.hash,
+    gasUsed: BigInt(event.transaction.gasUsed || 0),
+    logIndex: event.logIndex,
   };
 
-  await context.SwapEvent.set(swapEvent);
+  context.Swap.set(swap);
 
-  // Update pool volume
-  const pool = await context.Pool.get(poolAddress);
-  if (pool) {
-    pool.volumeUSD24h += volumeUSD;
-    pool.feesUSD24h += volumeUSD * 0.003; // 0.3% fee
-    await context.Pool.set(pool);
+  // Update pool stats with BigDecimal precision
+  const feeAmount = volumeUSD.times(new BigDecimal("0.003")); // 0.3% fee
+  const updatedPool = {
+    ...pool,
+    txCount: pool.txCount + 1n,
+    volumeUSD: pool.volumeUSD.plus(volumeUSD),
+    feesUSD: pool.feesUSD.plus(feeAmount),
+    lastSyncTimestamp: BigInt(event.block.timestamp),
+    lastSyncBlockNumber: BigInt(event.block.number),
+  };
+
+  // Recalculate APY with proper precision
+  updatedPool.apy = calculateAPY(updatedPool);
+  context.Pool.set(updatedPool);
+
+  // Check if significant APY change occurred
+  const apyChange = updatedPool.apy.minus(pool.apy).abs();
+  const threshold = new BigDecimal("2.0"); // 2% threshold
+  
+  if (apyChange.gt(threshold)) {
+    // Create AI action for APY change
+    const aiActionId = `${poolId}-apy-change-${event.block.timestamp}`;
+    const aiAction = {
+      id: aiActionId,
+      pool_id: poolId,
+      actionType: "APY_CHANGED" as ActionType,
+      status: "PENDING" as ActionStatus,
+      amount: volumeUSD,
+      confidence: new BigDecimal("0.85"),
+      rationale: `APY changed by ${apyChange.toFixed(2)}% - from ${pool.apy.toFixed(2)}% to ${updatedPool.apy.toFixed(2)}%`,
+      timestamp: BigInt(event.block.timestamp),
+      blockNumber: BigInt(event.block.number),
+      userAddress: event.params.sender.toLowerCase(),
+    };
+    
+    context.AIAction.set(aiAction);
+    
+    // Trigger AI analysis webhook (skip during preload)
+    if (!context.isPreload) {
+      await triggerAIAnalysis(poolId, "APY_CHANGE", event.block.timestamp, {
+        oldAPY: pool.apy.toString(),
+        newAPY: updatedPool.apy.toString(),
+        volumeUSD: volumeUSD.toString()
+      });
+    }
   }
 });
 
-// ERC20 Transfer handler - tracks user positions
-ERC20.Transfer.handler(async ({ event, context }) => {
-  const tokenAddress = event.srcAddress.toLowerCase();
+// Sync event handler (reserves update)
+UniswapV2Pair.Sync.handler(async ({ event, context }) => {
+  const poolId = event.srcAddress.toLowerCase();
   
-  // Only track pool token transfers
-  const isPoolToken = Object.keys(POOL_INFO).includes(tokenAddress);
-  if (!isPoolToken) return;
+  const pool = await context.Pool.getOrThrow(poolId, `Pool ${poolId} should exist`);
 
-  const from = event.params.from.toLowerCase();
-  const to = event.params.to.toLowerCase();
-  const value = event.params.value;
+  // Update reserves and recalculate TVL with BigDecimal precision
+  const tvlUSD = calculateTVL(event.params.reserve0, event.params.reserve1);
+  
+  const updatedPool = {
+    ...pool,
+    reserve0: event.params.reserve0,
+    reserve1: event.params.reserve1,
+    tvlUSD,
+    lastSyncTimestamp: BigInt(event.block.timestamp),
+    lastSyncBlockNumber: BigInt(event.block.number),
+  };
 
-  // Update sender position
-  if (from !== "0x0000000000000000000000000000000000000000") {
-    await updateUserPosition(context, from, tokenAddress, -Number(value), event.block.timestamp);
-  }
-
-  // Update receiver position  
-  if (to !== "0x0000000000000000000000000000000000000000") {
-    await updateUserPosition(context, to, tokenAddress, Number(value), event.block.timestamp);
-  }
+  context.Pool.set(updatedPool);
 });
 
 // Helper functions
-function calculateSwapVolumeUSD(amount0: bigint, amount1: bigint): number {
-  const ethPrice = 2000;
-  return (Number(amount0) / 1e18 * ethPrice + Number(amount1) / 1e18 * ethPrice) / 2;
-}
-
-function getDateString(timestamp: bigint): string {
-  const date = new Date(Number(timestamp) * 1000);
-  return date.toISOString().split('T')[0];
-}
-
-async function updateUserPosition(
-  context: any,
-  user: string,
-  poolAddress: string,
-  balanceChange: number,
-  timestamp: bigint
-) {
-  const positionId = `${user}-${poolAddress}`;
-  
-  let position = await context.UserPosition.get(positionId);
-  if (!position) {
-    position = {
-      id: positionId,
-      user,
-      pool_id: poolAddress,
-      balance: 0n,
-      valueUSD: 0,
-      lastUpdated: timestamp,
-    };
-  }
-
-  position.balance = BigInt(Number(position.balance) + balanceChange);
-  position.lastUpdated = timestamp;
-
-  // Calculate USD value
-  const pool = await context.Pool.get(poolAddress);
-  if (pool) {
-    const tokenPrice = pool.tvlUSD / (Number(pool.reserve0) + Number(pool.reserve1)) * 1e18;
-    position.valueUSD = Number(position.balance) / 1e18 * tokenPrice;
-  }
-
-  await context.UserPosition.set(position);
-}
-
-async function updateDailyMetrics(
-  context: any,
-  poolAddress: string,
-  pool: any,
-  block: any
-) {
-  const dateString = getDateString(block.timestamp);
-  const metricsId = `${poolAddress}-${dateString}`;
-
-  const metrics: YieldMetrics = {
-    id: metricsId,
-    pool_id: poolAddress,
-    date: dateString,
-    apy: pool.apy,
-    tvlUSD: pool.tvlUSD,
-    volumeUSD: pool.volumeUSD24h,
-    feesUSD: pool.feesUSD24h,
-    blockNumber: block.number,
-    blockTimestamp: block.timestamp,
+async function getTokenSymbol(tokenAddress: string): Promise<string> {
+  // In a real implementation, this would query the token contract
+  const knownTokens: { [key: string]: string } = {
+    "0xa0b86a33e6441e6c7d3e4c5b4b6b6b6b6b6b6b6b": "USDC",
+    "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": "WETH",
+    "0x6b175474e89094c44da98b954eedeac495271d0f": "DAI",
   };
+  
+  return knownTokens[tokenAddress.toLowerCase()] || "UNKNOWN";
+}
 
-  await context.YieldMetrics.set(metrics);
+function calculateVolumeUSD(
+  amount0In: bigint,
+  amount1In: bigint,
+  amount0Out: bigint,
+  amount1Out: bigint
+): BigDecimal {
+  // Calculate total amounts with proper precision
+  const totalAmount0 = amount0In + amount0Out;
+  const totalAmount1 = amount1In + amount1Out;
+  
+  // Convert to BigDecimal with 18 decimal precision
+  const amount0USD = new BigDecimal(totalAmount0.toString()).div(new BigDecimal("1e18"));
+  const amount1USD = new BigDecimal(totalAmount1.toString()).div(new BigDecimal("1e18"));
+  
+  // Simplified: assume 1:1 USD ratio for demo (would use price oracles in production)
+  return amount0USD.plus(amount1USD);
+}
+
+function calculateTVL(reserve0: bigint, reserve1: bigint): BigDecimal {
+  // Convert reserves to USD with proper precision
+  const reserve0USD = new BigDecimal(reserve0.toString()).div(new BigDecimal("1e18"));
+  const reserve1USD = new BigDecimal(reserve1.toString()).div(new BigDecimal("1e18"));
+  
+  // Simplified: assume 1:1 USD ratio for demo
+  return reserve0USD.plus(reserve1USD);
+}
+
+function calculateAPY(pool: any): BigDecimal {
+  // Simplified APY calculation based on fees and TVL
+  if (pool.tvlUSD.isZero()) return new BigDecimal("0");
+  
+  // Calculate daily fees (assume 30 days of data)
+  const dailyFees = pool.feesUSD.div(new BigDecimal("30"));
+  const dailyYield = dailyFees.div(pool.tvlUSD);
+  const apy = dailyYield.times(new BigDecimal("365")).times(new BigDecimal("100"));
+  
+  // Cap at 1000% APY
+  const maxAPY = new BigDecimal("1000");
+  return apy.gt(maxAPY) ? maxAPY : apy;
 }
 
 async function triggerAIAnalysis(
-  poolAddress: string,
-  oldAPY: number,
-  newAPY: number,
-  timestamp: bigint
+  poolId: string,
+  eventType: string,
+  timestamp: number,
+  data?: any
 ) {
+  // Send webhook to AI agent
   try {
-    const response = await fetch('http://localhost:3002/webhooks/envio', {
+    await fetch('http://localhost:3003/envio-webhook', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        event: 'pool_apy_change',
-        data: {
-          poolAddress,
-          oldAPY,
-          newAPY,
-          timestamp: Number(timestamp),
-          blockNumber: 0 // Would be actual block number
-        }
+        poolId,
+        eventType,
+        timestamp,
+        data,
+        source: 'envio-indexer'
       })
     });
-    
-    console.log(`🤖 AI analysis triggered for ${poolAddress}: ${oldAPY}% → ${newAPY}%`);
   } catch (error) {
     console.error('Failed to trigger AI analysis:', error);
   }

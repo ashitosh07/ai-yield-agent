@@ -35,7 +35,7 @@ echo.
 echo 🌐 Frontend:           http://localhost:3000
 echo 🔧 Backend API:        http://localhost:3002
 echo 🤖 AI Agent:           http://localhost:3003
-echo 🎭 Farcaster Mini App: http://localhost:3004
+echo 🎭 Farcaster Mini App: http://localhost:3006
 echo.
 echo Press any key to open the application...
 pause >nul

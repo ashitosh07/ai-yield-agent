@@ -42,7 +42,7 @@ class FarcasterService {
                 `#DeFi #AI #YieldOptimization #Monad`;
 
     const embeds = [{
-      url: `http://localhost:3004/frame/portfolio/${user}`
+      url: `http://localhost:3006/frame/portfolio/${user}`
     }];
 
     return await this.createCast(text, embeds);
@@ -59,7 +59,7 @@ class FarcasterService {
                 `#DeFi #Delegation #AI #SmartAccounts`;
 
     const embeds = [{
-      url: `http://localhost:3004/frame/portfolio/${user}`
+      url: `http://localhost:3006/frame/portfolio/${user}`
     }];
 
     return await this.createCast(text, embeds);

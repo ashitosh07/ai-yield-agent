@@ -51,7 +51,7 @@ echo 📊 Service URLs:
 echo    Frontend:  http://localhost:3000
 echo    Backend:   http://localhost:3002
 echo    AI Agent:  http://localhost:3003
-echo    Farcaster: http://localhost:3004
+echo    Farcaster: http://localhost:3006
 echo.
 echo 🎯 Demo Flow:
 echo    1. Open http://localhost:3000 in your browser
