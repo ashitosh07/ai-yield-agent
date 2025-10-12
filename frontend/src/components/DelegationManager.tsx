@@ -1,488 +1,360 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
+import React, { useState, useEffect } from 'react';
 import { useSmartAccount } from '../hooks/useSmartAccount';
+import { useAccount } from 'wagmi';
 
-interface Delegation {
-  id: string;
-  delegateAddress: string;
-  maxAmount: string;
-  expiry: string;
-  allowedPools: string[];
-  status: 'active' | 'expired' | 'revoked';
-  createdAt: string;
-  usedAmount: string;
-  transactionCount: number;
-}
-
-interface Pool {
-  address: string;
-  name: string;
-  apy: number;
-  riskScore: number;
-}
-
-export function DelegationManager({ smartAccount }: { smartAccount?: any }) {
+export default function DelegationManager({ smartAccount }) {
   const { address } = useAccount();
-  const { createDelegation, revokeDelegation, isLoading, error } = useSmartAccount();
-  
-  // Mock smart account if not provided
-  const mockSmartAccount = smartAccount || {
-    address: '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b',
-    signDelegation: async () => '0x' + Math.random().toString(16).substr(2, 128)
-  };
+  const {
+    createDelegation,
+    revokeDelegation,
+    executeWithDelegation,
+    isLoading,
+    error
+  } = useSmartAccount();
 
-  const [delegations, setDelegations] = useState<Delegation[]>([]);
-  const [pools, setPools] = useState<Pool[]>([]);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [delegations, setDelegations] = useState([
+    {
+      id: '1',
+      delegate: '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b',
+      status: 'active',
+      createdAt: new Date().toISOString(),
+      caveats: [
+        { type: 'AllowedTargets', value: ['0xf817257fed379853cDe0fa4F97AB987181B1E5Ea'] }, // USDC testnet
+        { type: 'MaxAmount', value: '1000000000' }, // 1000 USDC (6 decimals)
+        { type: 'ExpiryTime', value: Math.floor(Date.now() / 1000) + 86400 }
+      ],
+      purpose: 'AI Yield Optimization'
+    }
+  ]);
 
-  // Form state
-  const [formData, setFormData] = useState({
-    maxAmount: '1000',
+  const [newDelegation, setNewDelegation] = useState({
+    delegate: '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b', // AI Agent address
+    maxAmount: '1000000000', // 1000 USDC
+    allowedTargets: '0xf817257fed379853cDe0fa4F97AB987181B1E5Ea', // USDC testnet
     expiryHours: '24',
-    selectedPools: [] as string[],
-    riskTolerance: 'medium'
+    purpose: 'AI Yield Optimization'
   });
 
-  useEffect(() => {
-    if (address) {
-      fetchDelegations();
-      fetchPools();
-    }
-  }, [address]);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Remove this useEffect as isSuccess is not defined
-
-  const fetchDelegations = async () => {
-    try {
-      console.log('🔄 Fetching delegations from API...');
-      const response = await fetch(`http://localhost:3001/api/smart-account/delegations/${address}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        console.log('✅ Delegations fetched:', data.delegations);
-        setDelegations(data.delegations);
-      }
-    } catch (error) {
-      console.warn('⚠️ API not available, using local state:', error);
-      setDelegations([]);
-    } finally {
-      setLoading(false);
+  // Preset configurations for common use cases
+  const presets = {
+    yieldOptimization: {
+      delegate: '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b',
+      maxAmount: '1000000000',
+      allowedTargets: '0xf817257fed379853cDe0fa4F97AB987181B1E5Ea,0x88b8E2161DEDC77EF4ab7585569D2415a1C1055D',
+      expiryHours: '24',
+      purpose: 'AI Yield Optimization'
+    },
+    trading: {
+      delegate: '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b',
+      maxAmount: '500000000',
+      allowedTargets: '0x961235a9020b05c44df1026d956d1f4d78014276', // UniswapV3Factory
+      expiryHours: '12',
+      purpose: 'Automated Trading'
     }
   };
 
-  const fetchPools = async () => {
-    try {
-      console.log('🔄 Fetching pools from Envio API...');
-      const response = await fetch('http://localhost:3001/api/envio/pools');
-      const data = await response.json();
-      
-      if (data.success) {
-        console.log('✅ Pools fetched from Envio:', data.pools.length);
-        setPools(data.pools.map((pool: any) => ({
-          address: pool.address,
-          name: pool.name,
-          apy: pool.apy,
-          riskScore: pool.riskScore
-        })));
-      }
-    } catch (error) {
-      console.warn('⚠️ Envio API not available, using mock pools:', error);
-      setPools([
-        { address: '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b', name: 'USDC/ETH', apy: 12.5, riskScore: 0.25 },
-        { address: '0x853d955aCEf822Db058eb8505911ED77F175b99e', name: 'DAI/USDC', apy: 8.3, riskScore: 0.15 },
-        { address: '0x1234567890abcdef1234567890abcdef12345678', name: 'WBTC/ETH', apy: 15.2, riskScore: 0.45 },
-        { address: '0xabcdef1234567890abcdef1234567890abcdef12', name: 'LINK/ETH', apy: 9.8, riskScore: 0.35 }
-      ]);
-    }
+  const handlePresetSelect = (presetKey) => {
+    setNewDelegation(presets[presetKey]);
   };
 
-  const handleCreateDelegation = async (e: React.FormEvent) => {
+  const handleCreateDelegation = async (e) => {
     e.preventDefault();
     
-    if (!formData.maxAmount || formData.selectedPools.length === 0) {
-      alert('Please fill in max amount and select at least one pool');
-      return;
-    }
-
-    // Use mock smart account for demo
-    const accountToUse = smartAccount || mockSmartAccount;
-
     try {
       const caveats = [
         {
+          type: 'AllowedTargets',
+          value: newDelegation.allowedTargets.split(',').map(addr => addr.trim())
+        },
+        {
           type: 'MaxAmount',
-          value: formData.maxAmount,
+          value: newDelegation.maxAmount
         },
         {
-          type: 'AllowedTargets', 
-          value: formData.selectedPools,
-        },
-        {
-          type: 'Expiry',
-          value: Math.floor(Date.now() / 1000) + (parseInt(formData.expiryHours || '24') * 3600),
-        },
+          type: 'ExpiryTime',
+          value: Math.floor(Date.now() / 1000) + (parseInt(newDelegation.expiryHours) * 3600)
+        }
       ];
 
-      // Mock delegation creation for demo
-      const delegation = {
-        hash: '0x' + Math.random().toString(16).substr(2, 64),
-        delegate: '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b',
-        authority: 'yield-optimization',
+      const result = await createDelegation({
+        delegate: newDelegation.delegate,
         caveats
-      };
-      const txHash = '0x' + Math.random().toString(16).substr(2, 64);
-      
-      console.log('✅ Mock delegation created:', { delegation, txHash });
-
-      console.log('✅ Delegation created:', { delegation, txHash });
-      
-      // Add to local state
-      const newDelegation = {
-        id: delegation.hash,
-        delegateAddress: '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b',
-        maxAmount: formData.maxAmount,
-        expiry: new Date(Date.now() + (parseInt(formData.expiryHours || '24') * 3600 * 1000)).toISOString(),
-        allowedPools: formData.selectedPools,
-        status: 'active' as const,
-        createdAt: new Date().toISOString(),
-        usedAmount: '0',
-        transactionCount: 0,
-      };
-      
-      setDelegations(prev => [...prev, newDelegation]);
-      setShowCreateForm(false);
-      setFormData({
-        maxAmount: '1000',
-        expiryHours: '24',
-        selectedPools: [],
-        riskTolerance: 'medium'
       });
-    } catch (error) {
-      console.error('❌ Error creating delegation:', error);
-      alert('Failed to create delegation: ' + (error as Error).message);
+
+      const delegation = {
+        id: Date.now().toString(),
+        delegate: newDelegation.delegate,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        caveats,
+        txHash: result.txHash,
+        purpose: newDelegation.purpose
+      };
+
+      setDelegations(prev => [...prev, delegation]);
+      setNewDelegation({ 
+        delegate: '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b', 
+        maxAmount: '1000000000', 
+        allowedTargets: '0xf817257fed379853cDe0fa4F97AB987181B1E5Ea', 
+        expiryHours: '24',
+        purpose: 'AI Yield Optimization'
+      });
+    } catch (err) {
+      console.error('Failed to create delegation:', err);
     }
   };
 
-  const handleRevokeDelegation = async (delegationId: string) => {
+  const handleRevokeDelegation = async (delegationId) => {
     try {
-      const txHash = await revokeDelegation(delegationId);
-      console.log('✅ Delegation revoked:', txHash);
+      const delegation = delegations.find(d => d.id === delegationId);
+      await revokeDelegation(delegation.txHash);
       
-      // Update local state
-      setDelegations(prev => prev.map(d => 
-        d.id === delegationId 
-          ? { ...d, status: 'revoked' as const }
-          : d
-      ));
-    } catch (error) {
-      console.error('❌ Error revoking delegation:', error);
-      alert('Failed to revoke delegation: ' + (error as Error).message);
+      setDelegations(prev => 
+        prev.map(d => 
+          d.id === delegationId 
+            ? { ...d, status: 'revoked' }
+            : d
+        )
+      );
+    } catch (err) {
+      console.error('Failed to revoke delegation:', err);
     }
   };
 
-  const handlePoolSelection = (poolAddress: string) => {
-    setFormData(prev => ({
-      ...prev,
-      selectedPools: prev.selectedPools.includes(poolAddress)
-        ? prev.selectedPools.filter(p => p !== poolAddress)
-        : [...prev.selectedPools, poolAddress]
-    }));
+  const getTokenName = (address) => {
+    const tokens = {
+      '0xf817257fed379853cDe0fa4F97AB987181B1E5Ea': 'USDC',
+      '0x88b8E2161DEDC77EF4ab7585569D2415a1C1055D': 'USDT',
+      '0xcf5a6076cfa32686c0Df13aBaDa2b40dec133F1d': 'WBTC',
+      '0xB5a30b0FDc42e3E9760Cb8449Fb37': 'WETH'
+    };
+    return tokens[address] || address.slice(0, 6) + '...' + address.slice(-4);
   };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'text-green-400 bg-green-900/30 border-green-500';
-      case 'expired': return 'text-yellow-400 bg-yellow-900/30 border-yellow-500';
-      case 'revoked': return 'text-red-400 bg-red-900/30 border-red-500';
-      default: return 'text-gray-400 bg-gray-900/30 border-gray-500';
-    }
-  };
-
-  const getRiskColor = (score: number) => {
-    if (score < 0.3) return 'text-green-400';
-    if (score < 0.6) return 'text-yellow-400';
-    return 'text-red-400';
-  };
-
-  const calculateDaysUntilExpiry = (expiry: string) => {
-    const expiryDate = new Date(expiry);
-    const now = new Date();
-    const diffTime = expiryDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-2xl font-bold text-white">Delegation Management</h2>
-          <p className="text-gray-400 mt-1">Manage AI agent permissions and constraints</p>
-        </div>
-        <button
-          onClick={() => setShowCreateForm(true)}
-          className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-all"
-        >
-          + Create Delegation
-        </button>
-      </div>
-
-      {/* Create Delegation Form */}
-      {showCreateForm && (
-        <div className="glass rounded-xl p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-xl font-semibold text-white">Create New Delegation</h3>
-            <button
-              onClick={() => setShowCreateForm(false)}
-              className="text-gray-400 hover:text-white"
-            >
-              ✕
-            </button>
+      <div className="glass p-6 rounded-xl">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h3 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              🔐 MetaMask Smart Account Delegations
+            </h3>
+            <p className="text-gray-400 mt-1">Grant scoped permissions to AI agents for autonomous DeFi operations</p>
           </div>
-
-          <form onSubmit={handleCreateDelegation} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* AI Agent Address */}
-              <div>
-                <label className="block text-sm font-medium text-black-300 mb-2">
-                  AI Agent Address
-                </label>
-                <input
-                  type="text"
-                  value="0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b"
-                  disabled
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-gray-300 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Max Amount */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Max Amount (USD)
-                </label>
-                <input
-                  type="number"
-                  value={formData.maxAmount}
-                  onChange={(e) => setFormData(prev => ({ ...prev, maxAmount: e.target.value }))}
-                  className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none"
-                  placeholder="1000"
-                  required
-                />
-              </div>
-
-              {/* Expiry Hours */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Expiry (Hours)
-                </label>
-                <select
-                  value={formData.expiryHours || '24'}
-                  onChange={(e) => setFormData(prev => ({ ...prev, expiryHours: e.target.value }))}
-                  className="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 text-white focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="1">1 Hour</option>
-                  <option value="6">6 Hours</option>
-                  <option value="24">24 Hours</option>
-                  <option value="168">1 Week</option>
-                </select>
-              </div>
-
-              {/* Authority */}
-              <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Authority
-                </label>
-                <input
-                  type="text"
-                  value="yield-optimization"
-                  disabled
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-gray-300 focus:border-blue-500 focus:outline-none"
-                />
-              </div>
+          <div className="text-right">
+            <div className="text-sm text-gray-400">Smart Account</div>
+            <div className="text-blue-400 font-mono text-sm">
+              {smartAccount?.address?.slice(0, 8)}...{smartAccount?.address?.slice(-6)}
             </div>
+          </div>
+        </div>
 
-            {/* Pool Selection */}
+        {/* Preset Buttons */}
+        <div className="flex space-x-3 mb-6">
+          <button
+            onClick={() => handlePresetSelect('yieldOptimization')}
+            className="bg-gradient-to-r from-green-500/20 to-blue-500/20 border border-green-500/30 text-green-400 px-4 py-2 rounded-lg hover:from-green-500/30 hover:to-blue-500/30 transition-all"
+          >
+            🎯 Yield Optimization
+          </button>
+          <button
+            onClick={() => handlePresetSelect('trading')}
+            className="bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-purple-400 px-4 py-2 rounded-lg hover:from-purple-500/30 hover:to-pink-500/30 transition-all"
+          >
+            📈 Automated Trading
+          </button>
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="bg-gray-500/20 border border-gray-500/30 text-gray-400 px-4 py-2 rounded-lg hover:bg-gray-500/30 transition-all"
+          >
+            ⚙️ {showAdvanced ? 'Hide' : 'Show'} Advanced
+          </button>
+        </div>
+        
+        {/* Create New Delegation */}
+        <form onSubmit={handleCreateDelegation} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Allowed Pools ({formData.selectedPools.length} selected)
+                Purpose
               </label>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {pools.map((pool) => (
-                  <div
-                    key={pool.address}
-                    onClick={() => handlePoolSelection(pool.address)}
-                    className={`p-4 rounded-lg border cursor-pointer transition-all ${
-                      formData.selectedPools.includes(pool.address)
-                        ? 'border-blue-500 bg-blue-900/30'
-                        : 'border-gray-600 bg-gray-800/50 hover:border-gray-500'
-                    }`}
-                  >
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="text-white font-semibold">{pool.name}</div>
-                      <div className={`text-sm ${getRiskColor(pool.riskScore)}`}>
-                        {pool.riskScore < 0.3 ? 'Low' : pool.riskScore < 0.6 ? 'Med' : 'High'}
-                      </div>
-                    </div>
-                    <div className="text-green-400 font-medium">{pool.apy.toFixed(1)}% APY</div>
-                  </div>
-                ))}
-              </div>
+              <input
+                type="text"
+                value={newDelegation.purpose}
+                onChange={(e) => setNewDelegation(prev => ({ ...prev, purpose: e.target.value }))}
+                className="w-full px-4 py-3 glass border border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400"
+                placeholder="AI Yield Optimization"
+              />
             </div>
-
-            {/* Submit Button */}
-            <div className="flex justify-end space-x-4">
-              <button
-                type="button"
-                onClick={() => setShowCreateForm(false)}
-                className="px-6 py-3 border border-gray-600 text-gray-300 rounded-lg hover:bg-gray-800 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-all disabled:opacity-50"
-              >
-                {isLoading ? 'Creating...' : 'Create Delegation'}
-              </button>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Delegate (AI Agent Address)
+              </label>
+              <input
+                type="text"
+                value={newDelegation.delegate}
+                onChange={(e) => setNewDelegation(prev => ({ ...prev, delegate: e.target.value }))}
+                className="w-full px-4 py-3 glass border border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400 font-mono text-sm"
+                placeholder="0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b"
+                required
+              />
             </div>
-          </form>
-        </div>
-      )}
-
-      {/* Active Delegations */}
-      <div className="glass rounded-xl p-6">
-        <h3 className="text-xl font-semibold text-white mb-4">Active Delegations</h3>
-        
-        {delegations.length > 0 ? (
-          <div className="space-y-4">
-            {delegations.map((delegation) => (
-              <div key={delegation.id} className="bg-gray-800/50 rounded-lg p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className={`px-3 py-1 rounded-full text-sm border ${getStatusColor(delegation.status)}`}>
-                      {delegation.status.toUpperCase()}
-                    </div>
-                    <div className="text-gray-400 text-sm">
-                      Created {new Date(delegation.createdAt).toLocaleDateString()}
-                    </div>
-                  </div>
-                  
-                  {delegation.status === 'active' && (
-                    <button
-                      onClick={() => handleRevokeDelegation(delegation.id)}
-                      className="text-red-400 hover:text-red-300 text-sm"
-                    >
-                      Revoke
-                    </button>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                  <div>
-                    <div className="text-gray-400 text-sm">Max Amount</div>
-                    <div className="text-white font-semibold">{delegation.maxAmount} ETH</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400 text-sm">Used Amount</div>
-                    <div className="text-white font-semibold">{delegation.usedAmount} ETH</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400 text-sm">Transactions</div>
-                    <div className="text-white font-semibold">{delegation.transactionCount}</div>
-                  </div>
-                  <div>
-                    <div className="text-gray-400 text-sm">Expires In</div>
-                    <div className="text-white font-semibold">
-                      {calculateDaysUntilExpiry(delegation.expiry)} days
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="text-gray-400 text-sm mb-2">Allowed Pools ({delegation.allowedPools.length})</div>
-                  <div className="flex flex-wrap gap-2">
-                    {delegation.allowedPools.map((poolAddress) => {
-                      const pool = pools.find(p => p.address === poolAddress);
-                      return (
-                        <div key={poolAddress} className="bg-gray-700 px-3 py-1 rounded-full text-sm text-white">
-                          {pool?.name || `${poolAddress.slice(0, 6)}...`}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            ))}
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Max Amount (Wei/Tokens)
+              </label>
+              <input
+                type="text"
+                value={newDelegation.maxAmount}
+                onChange={(e) => setNewDelegation(prev => ({ ...prev, maxAmount: e.target.value }))}
+                className="w-full px-4 py-3 glass border border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400"
+                placeholder="1000000000 (1000 USDC)"
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Expiry (hours)
+              </label>
+              <select
+                value={newDelegation.expiryHours}
+                onChange={(e) => setNewDelegation(prev => ({ ...prev, expiryHours: e.target.value }))}
+                className="w-full px-4 py-3 glass border border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white"
+              >
+                <option value="1">1 hour</option>
+                <option value="6">6 hours</option>
+                <option value="12">12 hours</option>
+                <option value="24">24 hours</option>
+                <option value="168">1 week</option>
+              </select>
+            </div>
           </div>
-        ) : (
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🔐</div>
-            <div className="text-xl text-white mb-2">No Delegations Yet</div>
-            <div className="text-gray-400 mb-6">
-              Create your first delegation to enable AI-powered yield optimization
+          
+          {showAdvanced && (
+            <div>
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Allowed Target Contracts (comma-separated)
+              </label>
+              <textarea
+                value={newDelegation.allowedTargets}
+                onChange={(e) => setNewDelegation(prev => ({ ...prev, allowedTargets: e.target.value }))}
+                className="w-full px-4 py-3 glass border border-white/10 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-white placeholder-gray-400 font-mono text-sm"
+                placeholder="0xf817257fed379853cDe0fa4F97AB987181B1E5Ea,0x88b8E2161DEDC77EF4ab7585569D2415a1C1055D"
+                rows={3}
+                required
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                USDC: 0xf817257fed379853cDe0fa4F97AB987181B1E5Ea | USDT: 0x88b8E2161DEDC77EF4ab7585569D2415a1C1055D
+              </p>
             </div>
-            <button
-              onClick={() => setShowCreateForm(true)}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-all"
-            >
-              Create Delegation
-            </button>
+          )}
+          
+          <button
+            type="submit"
+            disabled={isLoading || !smartAccount}
+            className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-lg hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 transition-all font-medium"
+          >
+            {isLoading ? 'Creating Delegation...' : '🔐 Create Scoped Delegation'}
+          </button>
+        </form>
+
+        {error && (
+          <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 mt-4">
+            <p className="text-red-400 font-medium">Delegation Error</p>
+            <p className="text-red-300 text-sm">{error}</p>
           </div>
         )}
       </div>
 
-      {/* Smart Account Status & Delegation Info */}
-      <div className="glass rounded-xl p-6">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-white">MetaMask Smart Accounts Integration</h3>
-          <div className={`px-3 py-1 rounded-full text-sm ${
-            smartAccount ? 'bg-green-900/30 text-green-400 border border-green-500' : 'bg-red-900/30 text-red-400 border border-red-500'
-          }`}>
-            {smartAccount ? '✅ Active' : '❌ Not Connected'}
-          </div>
-        </div>
+      {/* Existing Delegations */}
+      <div className="glass p-6 rounded-xl">
+        <h4 className="text-xl font-bold text-white mb-4">📋 Active Delegations</h4>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="text-center">
-            <div className="text-3xl mb-3">🔒</div>
-            <div className="text-white font-semibold mb-2">Delegation Toolkit</div>
-            <div className="text-gray-400 text-sm">
-              Real on-chain delegations with scoped permissions: amount limits, target contracts, and expiry times.
-            </div>
+        {delegations.length === 0 ? (
+          <div className="text-center py-8">
+            <div className="text-6xl mb-4">🔒</div>
+            <p className="text-gray-400">No delegations created yet.</p>
+            <p className="text-gray-500 text-sm">Create your first delegation to enable AI automation.</p>
           </div>
-          <div className="text-center">
-            <div className="text-3xl mb-3">⚡</div>
-            <div className="text-white font-semibold mb-2">Smart Account Execution</div>
-            <div className="text-gray-400 text-sm">
-              AI executes transactions through your Smart Account with gasless operations and bundled transactions.
-            </div>
-          </div>
-          <div className="text-center">
-            <div className="text-3xl mb-3">🌐</div>
-            <div className="text-white font-semibold mb-2">Monad Testnet</div>
-            <div className="text-gray-400 text-sm">
-              Deployed on Monad testnet with real Smart Account contracts and delegation management.
-            </div>
-          </div>
-        </div>
-        
-        {error && (
-          <div className="mt-4 bg-red-900/30 border border-red-500 rounded-lg p-4">
-            <p className="text-red-400 font-medium">Smart Account Error</p>
-            <p className="text-red-300 text-sm">{error}</p>
+        ) : (
+          <div className="space-y-4">
+            {delegations.map((delegation) => {
+              const maxAmount = delegation.caveats.find(c => c.type === 'MaxAmount')?.value;
+              const targets = delegation.caveats.find(c => c.type === 'AllowedTargets')?.value || [];
+              const expiry = delegation.caveats.find(c => c.type === 'ExpiryTime')?.value;
+              
+              return (
+                <div key={delegation.id} className="glass border border-white/10 rounded-lg p-4 hover:border-white/20 transition-all">
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-3 mb-3">
+                        <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                          delegation.status === 'active' 
+                            ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                            : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                        }`}>
+                          {delegation.status === 'active' ? '🟢 Active' : '🔴 Revoked'}
+                        </span>
+                        <span className="text-blue-400 font-medium">{delegation.purpose}</span>
+                        <span className="text-xs text-gray-400">
+                          {new Date(delegation.createdAt).toLocaleString()}
+                        </span>
+                      </div>
+                      
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-400">Delegate:</p>
+                          <p className="text-white font-mono text-xs">{delegation.delegate}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-400">Max Amount:</p>
+                          <p className="text-white">{maxAmount} Wei</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-400">Allowed Targets:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {targets.map((target, idx) => (
+                              <span key={idx} className="bg-blue-500/20 text-blue-400 px-2 py-1 rounded text-xs">
+                                {getTokenName(target)}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-gray-400">Expires:</p>
+                          <p className="text-white">{new Date(expiry * 1000).toLocaleString()}</p>
+                        </div>
+                      </div>
+                      
+                      {delegation.txHash && (
+                        <div className="mt-3 pt-3 border-t border-white/10">
+                          <p className="text-gray-400 text-xs">Transaction Hash:</p>
+                          <p className="text-gray-300 font-mono text-xs break-all">{delegation.txHash}</p>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {delegation.status === 'active' && (
+                      <button
+                        onClick={() => handleRevokeDelegation(delegation.id)}
+                        disabled={isLoading}
+                        className="bg-red-500/20 hover:bg-red-500/30 border border-red-500/50 text-red-400 px-4 py-2 rounded-lg transition-all disabled:opacity-50 ml-4"
+                      >
+                        🗑️ Revoke
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
