@@ -10,24 +10,26 @@ export const monadTestnet = {
   },
   rpcUrls: {
     default: {
-      http: ['https://testnet1.monad.xyz'],
-      webSocket: ['wss://testnet1.monad.xyz/ws'],
+      http: ['https://testnet-rpc.monad.xyz'],
+      webSocket: ['wss://testnet-rpc.monad.xyz'],
     },
     public: {
-      http: ['https://testnet1.monad.xyz'],
-      webSocket: ['wss://testnet1.monad.xyz/ws'],
+      http: ['https://testnet-rpc.monad.xyz'],
+      webSocket: ['wss://testnet-rpc.monad.xyz'],
     },
   },
   blockExplorers: {
-    default: { name: 'Monad Explorer', url: 'https://explorer.testnet1.monad.xyz' },
+    default: { name: 'Monad Explorer', url: 'https://testnet.monadexplorer.com' },
   },
   contracts: {
     // MetaMask Smart Account contracts
     smartAccountFactory: '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b',
     delegationManager: '0x853d955aCEf822Db058eb8505911ED77F175b99e',
     entryPoint: '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789',
-    // USDC for delegation scope
-    usdc: '0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238',
+    // Real testnet tokens
+    usdc: '0xf817257fed379853cDe0fa4F97AB987181B1E5Ea',
+    usdt: '0x88b8E2161DEDC77EF4ab7585569D2415a1C1055D',
+    weth: '0xB5a30b0FDc42e3E9760Cb8449Fb37',
   },
   testnet: true,
 };

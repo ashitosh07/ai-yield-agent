@@ -135,10 +135,16 @@ export class RealSmartAccountService {
         name: 'AI Yield Agent',
         version: '1',
         chainId: 10143,
-        verifyingContract: this.smartAccountAddress as `0x${string}`
+        verifyingContract: this.smartAccountAddress
       };
 
       const types = {
+        EIP712Domain: [
+          { name: 'name', type: 'string' },
+          { name: 'version', type: 'string' },
+          { name: 'chainId', type: 'uint256' },
+          { name: 'verifyingContract', type: 'address' }
+        ],
         Delegation: [
           { name: 'delegate', type: 'address' },
           { name: 'tokenAddress', type: 'address' },
@@ -149,7 +155,7 @@ export class RealSmartAccountService {
       };
 
       const nonce = Date.now();
-      const value = {
+      const message = {
         delegate: params.delegate,
         tokenAddress: params.tokenAddress,
         maxAmount: params.maxAmount.toString(),
@@ -157,14 +163,21 @@ export class RealSmartAccountService {
         nonce: nonce.toString()
       };
 
+      const typedData = {
+        types,
+        primaryType: 'Delegation',
+        domain,
+        message
+      };
+
       // Sign with MetaMask using EIP-712
       const signature = await ethereum.request({
         method: 'eth_signTypedData_v4',
-        params: [this.userAddress, JSON.stringify({ domain, types, value })]
+        params: [this.userAddress, JSON.stringify(typedData)]
       });
 
       const delegation = {
-        ...value,
+        ...message,
         signature,
         hash: `0x${nonce.toString(16).padStart(64, '0')}`
       };

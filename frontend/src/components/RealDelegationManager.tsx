@@ -15,26 +15,35 @@ export default function RealDelegationManager({ smartAccount, userAddress }: Rea
   
   // Check current chain
   useEffect(() => {
-    if (window.ethereum && window.ethereum.isMetaMask) {
-      let ethereum = window.ethereum;
-      
-      // If multiple wallets, ensure we use MetaMask
-      if (window.ethereum.providers) {
-        ethereum = window.ethereum.providers.find((p: any) => p.isMetaMask) || window.ethereum;
+    const checkNetwork = async () => {
+      if (window.ethereum && window.ethereum.isMetaMask) {
+        let ethereum = window.ethereum;
+        
+        // If multiple wallets, ensure we use MetaMask
+        if (window.ethereum.providers) {
+          ethereum = window.ethereum.providers.find((p: any) => p.isMetaMask) || window.ethereum;
+        }
+        
+        try {
+          const chainId = await ethereum.request({ method: 'eth_chainId' });
+          console.log('Current chain ID:', chainId, 'Expected: 0x279f');
+          setCurrentChainId(chainId);
+        } catch (error) {
+          console.error('Failed to get chain ID:', error);
+        }
+        
+        // Listen for chain changes
+        const handleChainChanged = (chainId: string) => {
+          console.log('Chain changed to:', chainId);
+          setCurrentChainId(chainId);
+        };
+        
+        ethereum.on('chainChanged', handleChainChanged);
+        return () => ethereum.removeListener('chainChanged', handleChainChanged);
       }
-      
-      ethereum.request({ method: 'eth_chainId' })
-        .then(setCurrentChainId)
-        .catch(console.error);
-      
-      // Listen for chain changes
-      const handleChainChanged = (chainId: string) => {
-        setCurrentChainId(chainId);
-      };
-      
-      ethereum.on('chainChanged', handleChainChanged);
-      return () => ethereum.removeListener('chainChanged', handleChainChanged);
-    }
+    };
+    
+    checkNetwork();
   }, []);
   
   // Initialize smart account when component mounts
@@ -115,14 +124,14 @@ export default function RealDelegationManager({ smartAccount, userAddress }: Rea
         </div>
         <button
           onClick={() => setShowCreateForm(true)}
-          disabled={!isInitialized || isLoading || currentChainId !== '0x279F'}
+          disabled={!isInitialized || isLoading || (currentChainId && currentChainId.toLowerCase() !== '0x279f')}
           className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white px-6 py-3 rounded-lg font-semibold transition-all disabled:opacity-50"
         >
           Create Delegation
         </button>
       </div>
 
-      {currentChainId !== '0x279F' && (
+      {currentChainId && currentChainId.toLowerCase() !== '0x279f' && (
         <div className="bg-yellow-500/20 border border-yellow-500/50 text-yellow-400 p-4 rounded-lg mb-6">
           <div className="flex justify-between items-center">
             <div>
@@ -139,22 +148,31 @@ export default function RealDelegationManager({ smartAccount, userAddress }: Rea
                 }
                 
                 try {
+                  console.log('Attempting to switch to Monad Testnet...');
                   await ethereum.request({
                     method: 'wallet_switchEthereumChain',
-                    params: [{ chainId: '0x279F' }]
+                    params: [{ chainId: '0x279f' }]
                   });
                 } catch (err: any) {
+                  console.log('Switch failed, trying to add network:', err.code);
                   if (err.code === 4902) {
-                    await ethereum.request({
-                      method: 'wallet_addEthereumChain',
-                      params: [{
-                        chainId: '0x279F',
-                        chainName: 'Monad Testnet',
-                        nativeCurrency: { name: 'Monad', symbol: 'MON', decimals: 18 },
-                        rpcUrls: ['https://testnet-rpc.monad.xyz'],
-                        blockExplorerUrls: ['https://testnet.monadexplorer.com']
-                      }]
-                    });
+                    try {
+                      await ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                          chainId: '0x279f',
+                          chainName: 'Monad Testnet',
+                          nativeCurrency: { name: 'Monad', symbol: 'MON', decimals: 18 },
+                          rpcUrls: ['https://testnet-rpc.monad.xyz'],
+                          blockExplorerUrls: ['https://testnet.monadexplorer.com']
+                        }]
+                      });
+                      console.log('Network added successfully');
+                    } catch (addErr) {
+                      console.error('Failed to add network:', addErr);
+                    }
+                  } else {
+                    console.error('Network switch error:', err);
                   }
                 }
               }}
