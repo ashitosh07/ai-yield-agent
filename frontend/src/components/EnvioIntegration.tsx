@@ -74,7 +74,7 @@ export function EnvioIntegration() {
 
         <div className="bg-blue-900/30 border border-blue-500 p-4 rounded-lg">
           <h4 className="text-blue-400 font-semibold mb-2">📊 GraphQL Endpoint</h4>
-          <code className="text-gray-300 text-sm">http://localhost:8080/v1/graphql</code>
+          <code className="text-gray-300 text-sm">http://localhost:8000/v1/graphql</code>
           <p className="text-gray-400 text-sm mt-2">
             Query pools, user positions, AI actions, and yield metrics in real-time
           </p>

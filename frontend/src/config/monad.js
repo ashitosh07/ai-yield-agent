@@ -26,10 +26,9 @@ export const monadTestnet = {
     smartAccountFactory: '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b',
     delegationManager: '0x853d955aCEf822Db058eb8505911ED77F175b99e',
     entryPoint: '0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789',
-    // Real testnet tokens
-    usdc: '0xf817257fed379853cDe0fa4F97AB987181B1E5Ea',
-    usdt: '0x88b8E2161DEDC77EF4ab7585569D2415a1C1055D',
-    weth: '0xB5a30b0FDc42e3E9760Cb8449Fb37',
+    // Real Monad testnet contracts
+    contract1: '0x642672169398C3281A14D063626371eFC30CeF3F',
+    contract2: '0x8f5f1F5a93Be3C57f53f85B705f179F936dcDCea',
   },
   testnet: true,
 };

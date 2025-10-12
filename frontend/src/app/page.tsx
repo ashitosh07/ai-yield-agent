@@ -8,6 +8,8 @@ import { AuditLog } from '../components/AuditLog';
 import { SimpleConnectWallet } from '../components/SimpleConnectWallet';
 import { FarcasterIntegration } from '../components/FarcasterIntegration';
 import { EnvioRealTime } from '../components/EnvioRealTime';
+import { HyperIndexStatus } from '../components/HyperIndexStatus';
+import { EventGenerator } from '../components/EventGenerator';
 import { SimpleDashboard } from '../components/SimpleDashboard';
 import { ClientOnly } from '../components/ClientOnly';
 import { RealWalletConnect } from '../components/RealWalletConnect';
@@ -98,7 +100,8 @@ export default function Home() {
                   { id: 'delegations', label: 'Delegations', icon: '🔐' },
                   { id: 'audit', label: 'Audit Log', icon: '📋' },
                   { id: 'farcaster', label: 'Social', icon: '🎭' },
-                  { id: 'envio', label: 'Envio', icon: '⚡' }
+                  { id: 'envio', label: 'Envio', icon: '⚡' },
+                  { id: 'events', label: 'Events', icon: '🎯' }
                 ].map((tab) => (
                   <button
                     key={tab.id}
@@ -121,7 +124,13 @@ export default function Home() {
                 {activeTab === 'delegations' && <RealDelegationManager smartAccount={smartAccount} userAddress={address!} />}
                 {activeTab === 'audit' && <AuditLog userAddress={address!} />}
                 {activeTab === 'farcaster' && <FarcasterIntegration />}
-                {activeTab === 'envio' && <EnvioRealTime />}
+                {activeTab === 'envio' && (
+                  <div className="space-y-6">
+                    <HyperIndexStatus />
+                    <EnvioRealTime />
+                  </div>
+                )}
+                {activeTab === 'events' && <EventGenerator userAddress={address!} />}
               </div>
             </>
           )}

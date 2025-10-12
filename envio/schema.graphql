@@ -1,172 +1,78 @@
-# AI Yield Agent - Envio Schema
-# Optimized for DeFi pool monitoring and AI-driven yield optimization
-
-# Enums for type safety
-enum ActionType {
-  REBALANCE
-  POOL_CREATED
-  APY_CHANGED
-  LARGE_SWAP
+type Transfer @entity {
+  id: ID!
+  from: String!
+  to: String!
+  value: BigInt!
+  contract: String!
+  blockNumber: Int!
+  timestamp: DateTime!
+  transactionHash: String!
 }
 
-enum ActionStatus {
-  PENDING
-  APPROVED
-  REJECTED
-  EXECUTED
-  FAILED
+type Approval @entity {
+  id: ID!
+  owner: String!
+  spender: String!
+  value: BigInt!
+  contract: String!
+  blockNumber: Int!
+  timestamp: DateTime!
+  transactionHash: String!
 }
 
-# Factory entity for tracking pool creation
-type Factory @entity {
-  id: ID!  # Factory contract address
-  
-  # Factory metrics
-  poolCount: BigInt!
-  totalVolumeUSD: BigDecimal! @config(precision: 20, scale: 8)
-  totalFeesUSD: BigDecimal! @config(precision: 20, scale: 8)
-  
-  # Relationships
-  pools: [Pool!]! @derivedFrom(field: "factory")
+type PoolCreated @entity {
+  id: ID!
+  token0: String!
+  token1: String!
+  fee: Int!
+  tickSpacing: Int!
+  pool: String!
+  contract: String!
+  blockNumber: Int!
+  timestamp: DateTime!
+  transactionHash: String!
 }
 
-# Core DeFi Pool Entity
-type Pool @entity {
-  id: ID!  # Pool contract address
-  
-  # Factory reference
-  factory: Factory
-  
-  # Token Information
-  token0: Bytes!
-  token1: Bytes!
-  token0Symbol: String!
-  token1Symbol: String!
-  
-  # Reserves with high precision
-  reserve0: BigInt! @config(precision: 76)
-  reserve1: BigInt! @config(precision: 76)
-  totalSupply: BigInt! @config(precision: 76)
-  
-  # Financial metrics with proper precision
-  volumeUSD: BigDecimal! @config(precision: 20, scale: 8)
-  feesUSD: BigDecimal! @config(precision: 20, scale: 8)
-  apy: BigDecimal! @config(precision: 10, scale: 4)  # APY with 4 decimal precision
-  tvlUSD: BigDecimal! @config(precision: 20, scale: 8)
-  
-  # Counters and status
-  txCount: BigInt!
-  isActive: Boolean!
-  
-  # Timestamps
-  createdAtTimestamp: BigInt!
-  createdAtBlockNumber: BigInt!
-  lastSyncTimestamp: BigInt!
-  lastSyncBlockNumber: BigInt!
-  
-  # Relationships (one-to-many)
-  swaps: [Swap!]! @derivedFrom(field: "pool")
-  aiActions: [AIAction!]! @derivedFrom(field: "pool")
-  dayData: [PoolDayData!]! @derivedFrom(field: "pool")
-}
-
-# Swap Transaction Entity
 type Swap @entity {
-  id: ID!  # tx_hash-log_index
-  
-  # Relationships
-  pool: Pool!
-  
-  # Transaction details
-  sender: Bytes! @index  # Indexed for efficient queries
-  recipient: Bytes! @index
-  
-  # Swap amounts with high precision
-  amount0In: BigInt! @config(precision: 76)
-  amount1In: BigInt! @config(precision: 76)
-  amount0Out: BigInt! @config(precision: 76)
-  amount1Out: BigInt! @config(precision: 76)
-  
-  # USD value with precision
-  volumeUSD: BigDecimal! @config(precision: 20, scale: 8)
-  
-  # Blockchain metadata
-  timestamp: BigInt!
-  blockNumber: BigInt!
-  txHash: Bytes!
-  gasUsed: BigInt!
-  logIndex: Int!
+  id: ID!
+  sender: String!
+  recipient: String!
+  amount0: BigInt!
+  amount1: BigInt!
+  sqrtPriceX96: BigInt!
+  liquidity: BigInt!
+  tick: Int!
+  contract: String!
+  blockNumber: Int!
+  timestamp: DateTime!
+  transactionHash: String!
 }
 
-# Daily aggregated pool data
-type PoolDayData @entity {
-  id: ID!  # pool_address-day_id
-  
-  # Relationships
-  pool: Pool!
-  
-  # Time period
-  date: Int!  # Unix timestamp of day start
-  
-  # Daily metrics with precision
-  volumeUSD: BigDecimal! @config(precision: 20, scale: 8)
-  feesUSD: BigDecimal! @config(precision: 20, scale: 8)
-  tvlUSD: BigDecimal! @config(precision: 20, scale: 8)
-  
-  # Daily counters
-  txCount: BigInt!
-  
-  # OHLC data for APY
-  open: BigDecimal! @config(precision: 10, scale: 4)
-  high: BigDecimal! @config(precision: 10, scale: 4)
-  low: BigDecimal! @config(precision: 10, scale: 4)
-  close: BigDecimal! @config(precision: 10, scale: 4)
+type Mint @entity {
+  id: ID!
+  sender: String!
+  owner: String!
+  tickLower: Int!
+  tickUpper: Int!
+  amount: BigInt!
+  amount0: BigInt!
+  amount1: BigInt!
+  contract: String!
+  blockNumber: Int!
+  timestamp: DateTime!
+  transactionHash: String!
 }
 
-# AI Action Entity for autonomous decisions
-type AIAction @entity {
-  id: ID!  # Unique action identifier
-  
-  # Relationships
-  pool: Pool!
-  user: User
-  
-  # Action details
-  actionType: ActionType!
-  status: ActionStatus!
-  
-  # Rebalancing details (optional)
-  fromPool: Bytes
-  toPool: Bytes
-  amount: BigDecimal! @config(precision: 20, scale: 8)
-  
-  # AI decision metrics
-  confidence: BigDecimal! @config(precision: 5, scale: 4)  # 0.0000 to 1.0000
-  rationale: String!
-  
-  # Execution details
-  timestamp: BigInt!
-  blockNumber: BigInt!
-  txHash: Bytes  # Set when executed
-  
-  # User interaction
-  userAddress: Bytes @index  # User who will receive the action
-  approvedAt: BigInt  # When user approved
-  executedAt: BigInt  # When action was executed
-}
-
-# User entity for tracking delegations and actions
-type User @entity {
-  id: ID!  # User wallet address
-  
-  # User metrics
-  totalValueLocked: BigDecimal! @config(precision: 20, scale: 8)
-  totalActionsExecuted: BigInt!
-  
-  # Relationships
-  aiActions: [AIAction!]! @derivedFrom(field: "user")
-  
-  # Timestamps
-  firstSeenAt: BigInt!
-  lastActiveAt: BigInt!
+type Burn @entity {
+  id: ID!
+  owner: String!
+  tickLower: Int!
+  tickUpper: Int!
+  amount: BigInt!
+  amount0: BigInt!
+  amount1: BigInt!
+  contract: String!
+  blockNumber: Int!
+  timestamp: DateTime!
+  transactionHash: String!
 }

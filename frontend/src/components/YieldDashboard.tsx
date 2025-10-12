@@ -38,6 +38,10 @@ interface Recommendation {
 }
 
 export function YieldDashboard() {
+  const realContracts = [
+    '0x642672169398C3281A14D063626371eFC30CeF3F',
+    '0x8f5f1F5a93Be3C57f53f85B705f179F936dcDCea'
+  ];
   const address = '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b';
   const [pools, setPools] = useState<Pool[]>([]);
   const [positions, setPositions] = useState<UserPosition[]>([]);

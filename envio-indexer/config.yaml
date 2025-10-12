@@ -1,0 +1,29 @@
+name: monad-yield-indexer
+description: AI Yield Agent Envio HyperIndex Integration
+
+networks:
+  - id: 41454
+    name: monad-testnet
+    rpc_config:
+      url: https://testnet-rpc.monad.xyz
+    hypersync_config:
+      url: https://monad-testnet.hypersync.xyz
+    start_block: 1000000
+    contracts:
+      - name: MonadToken
+        address: 0x8f5f1F5a93Be3C57f53f85B705f179F936dcDCea
+        abi_file_path: ./abis/MonadToken.json
+        handler: ./src/EventHandlers.ts
+        events:
+          - event: Transfer
+          - event: Approval
+
+field_selection:
+  transaction_fields:
+    - "hash"
+    - "block_number"
+    - "transaction_index"
+  block_fields:
+    - "number"
+    - "timestamp"
+    - "hash"

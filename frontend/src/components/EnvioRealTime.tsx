@@ -57,7 +57,10 @@ interface EnvioStats {
 }
 
 export function EnvioRealTime() {
-  const address = '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b';
+  const realContracts = [
+    '0x642672169398C3281A14D063626371eFC30CeF3F',
+    '0x8f5f1F5a93Be3C57f53f85B705f179F936dcDCea'
+  ];
   const [pools, setPools] = useState<PoolData[]>([]);
   const [stats, setStats] = useState<EnvioStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -136,7 +139,7 @@ export function EnvioRealTime() {
         cachedEvents: result.data.eventsProcessed,
         poolCount: 3,
         hyperSyncUrl: 'https://monad-testnet.hypersync.xyz',
-        graphqlUrl: 'https://indexer.bigdevenergy.link/monad/v1/graphql'
+        graphqlUrl: 'http://localhost:8080/v1/graphql'
       };
       setStats(statsData);
       setIsConnected(statsData.isMonitoring);
@@ -148,7 +151,7 @@ export function EnvioRealTime() {
   const fetchRecentEvents = useCallback(async () => {
     try {
       console.log('⚡ Fetching events from API...');
-      const response = await fetch('http://localhost:3002/api/envio/events?limit=10');
+      const response = await fetch('http://localhost:3002/api/envio/transfers?limit=10');
       if (!response.ok) throw new Error('Failed to fetch events');
       
       const result = await response.json();
@@ -478,21 +481,29 @@ export function EnvioRealTime() {
               <div key={index} className="bg-white/5 p-3 rounded-lg border-l-4 border-blue-500">
                 <div className="flex justify-between items-center">
                   <div className="flex items-center space-x-2">
-                    <span className="text-blue-400 font-medium">{event.type}</span>
-                    <span className="text-gray-400 text-sm">Block {formatNumber(event.blockNumber)}</span>
+                    <span className="text-blue-400 font-medium">Transfer</span>
+                    <span className="text-gray-400 text-sm">Block {formatNumber(event.blockNumber || 0)}</span>
                   </div>
                   <div className="text-gray-400 text-xs">
-                    {formatTimeAgo(event.timestamp)}
+                    {event.timestamp ? formatTimeAgo(new Date(event.timestamp).getTime() / 1000) : 'N/A'}
                   </div>
                 </div>
-                <div className="text-gray-300 text-sm mt-1 font-mono">
-                  {event.data?.pool?.slice(0, 20) || 'N/A'}...
-                </div>
-                {event.parsed && (
-                  <div className="text-gray-400 text-xs mt-1">
-                    Gas: {formatNumber(event.gasUsed || 0)}
+                <div className="flex justify-between items-center mt-2">
+                  <div className="text-gray-300 text-sm">
+                    <span className="text-gray-400">From:</span> {event.from?.slice(0, 10)}...
                   </div>
-                )}
+                  <div className="text-gray-300 text-sm">
+                    <span className="text-gray-400">To:</span> {event.to?.slice(0, 10)}...
+                  </div>
+                </div>
+                <div className="flex justify-between items-center mt-1">
+                  <div className="text-green-400 text-sm font-medium">
+                    Value: {event.value ? (parseInt(event.value) / 1e18).toFixed(4) : '0'} ETH
+                  </div>
+                  <div className="text-gray-400 text-xs">
+                    TX: {event.transactionHash?.slice(0, 10)}...
+                  </div>
+                </div>
               </div>
             ))
           ) : (

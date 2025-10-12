@@ -1,16 +1,18 @@
 {
-  "name": "ai-yield-agent",
+  "name": "ai-yield-agent-envio",
   "version": "1.0.0",
-  "description": "AI-powered yield optimization with delegated execution",
+  "description": "AI Yield Agent with Envio HyperSync Integration",
+  "main": "envio_hypersync_indexer.js",
   "scripts": {
-    "dev": "concurrently \"npm run frontend\" \"npm run backend\" \"npm run agent\"",
-    "frontend": "cd frontend && npm run dev",
-    "backend": "cd backend && npm start",
-    "agent": "cd agent && python main.py",
-    "build": "cd frontend && npm run build",
-    "test": "jest"
+    "start": "node envio_hypersync_indexer.js",
+    "dev": "nodemon envio_hypersync_indexer.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "ethers": "^6.8.0"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "nodemon": "^3.0.1"
   }
 }
