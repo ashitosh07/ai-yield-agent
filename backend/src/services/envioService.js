@@ -18,7 +18,8 @@ class EnvioService {
       }, {
         headers: {
           'Content-Type': 'application/json'
-        }
+        },
+        timeout: 5000
       });
 
       if (response.data.errors) {
@@ -27,9 +28,7 @@ class EnvioService {
 
       return response.data.data;
     } catch (error) {
-      console.error('Envio GraphQL query failed:', error.message);
-      // Return mock data for demo
-      return this.getMockData(query);
+      throw error;
     }
   }
 
@@ -244,24 +243,27 @@ class EnvioService {
    */
   async getIndexerStats() {
     try {
-      // This would query Envio's indexer status endpoint
-      const response = await axios.get(`${this.graphqlEndpoint.replace('/v1/graphql', '')}/health`);
+      const response = await axios.get(`${this.graphqlEndpoint.replace('/v1/graphql', '')}/health`, {
+        timeout: 5000
+      });
       
       return {
         status: 'healthy',
+        indexerStatus: 'active',
         latestBlock: response.data.latestBlock || 0,
         eventsProcessed: response.data.eventsProcessed || 0,
         hyperSyncLatency: response.data.hyperSyncLatency || 0,
         lastSync: new Date().toISOString()
       };
     } catch (error) {
-      // Return mock stats for demo
       return {
-        status: 'healthy',
-        latestBlock: Math.floor(Date.now() / 1000) - 1000000,
-        eventsProcessed: Math.floor(Math.random() * 10000) + 5000,
-        hyperSyncLatency: Math.floor(Math.random() * 100) + 50,
-        lastSync: new Date().toISOString()
+        status: 'offline',
+        indexerStatus: 'inactive',
+        latestBlock: 0,
+        eventsProcessed: 0,
+        hyperSyncLatency: 0,
+        lastSync: null,
+        error: error.message
       };
     }
   }

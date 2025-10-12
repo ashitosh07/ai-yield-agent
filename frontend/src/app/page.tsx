@@ -5,12 +5,10 @@ import RealSmartAccountSetup from '../components/RealSmartAccountSetup';
 import RealDelegationManager from '../components/RealDelegationManager';
 import { YieldDashboard } from '../components/YieldDashboard';
 import { AuditLog } from '../components/AuditLog';
-import { SimpleConnectWallet } from '../components/SimpleConnectWallet';
 import { FarcasterIntegration } from '../components/FarcasterIntegration';
 import { EnvioRealTime } from '../components/EnvioRealTime';
 import { HyperIndexStatus } from '../components/HyperIndexStatus';
-import { EventGenerator } from '../components/EventGenerator';
-import { SimpleDashboard } from '../components/SimpleDashboard';
+import { AdvancedDashboard } from '../components/AdvancedDashboard';
 import { ClientOnly } from '../components/ClientOnly';
 import { RealWalletConnect } from '../components/RealWalletConnect';
 
@@ -120,7 +118,7 @@ export default function Home() {
 
               {/* Content with animations */}
               <div className="animate-fade-in">
-                {activeTab === 'dashboard' && <SimpleDashboard userAddress={address!} />}
+                {activeTab === 'dashboard' && <AdvancedDashboard userAddress={address!} />}
                 {activeTab === 'delegations' && <RealDelegationManager smartAccount={smartAccount} userAddress={address!} />}
                 {activeTab === 'audit' && <AuditLog userAddress={address!} />}
                 {activeTab === 'farcaster' && <FarcasterIntegration />}
@@ -130,7 +128,7 @@ export default function Home() {
                     <EnvioRealTime />
                   </div>
                 )}
-                {activeTab === 'events' && <EventGenerator userAddress={address!} />}
+                {activeTab === 'events' && <YieldDashboard />}
               </div>
             </>
           )}

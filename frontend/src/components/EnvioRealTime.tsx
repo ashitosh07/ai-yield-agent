@@ -135,14 +135,14 @@ export function EnvioRealTime() {
       const statsData = {
         ...result.data,
         isMonitoring: result.data.indexerStatus === 'active',
-        subscriberCount: 12,
-        cachedEvents: result.data.eventsProcessed,
-        poolCount: 3,
+        subscriberCount: 0,
+        cachedEvents: result.data.eventsProcessed || 0,
+        poolCount: 0,
         hyperSyncUrl: 'https://monad-testnet.hypersync.xyz',
         graphqlUrl: 'http://localhost:8080/v1/graphql'
       };
       setStats(statsData);
-      setIsConnected(statsData.isMonitoring);
+      setIsConnected(result.data.indexerStatus === 'active');
     } catch (err) {
       console.error('Error fetching Envio stats:', err);
     }

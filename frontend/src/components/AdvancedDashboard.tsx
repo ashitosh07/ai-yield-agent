@@ -92,17 +92,22 @@ export function AdvancedDashboard() {
 
       if (poolsRes.ok) {
         const poolsData = await poolsRes.json();
-        setPools(poolsData.data?.pools || []);
+        setPools(poolsData.data || []);
       }
 
       if (analyticsRes.ok) {
         const analyticsData = await analyticsRes.json();
-        setAnalytics(analyticsData.analytics?.market || null);
+        setAnalytics(analyticsData.data || null);
       }
 
       if (portfolioRes && portfolioRes.ok) {
         const portfolioData = await portfolioRes.json();
-        setPortfolio(portfolioData.summary || null);
+        setPortfolio({
+          totalValue: portfolioData.totalValue || 0,
+          totalDailyEarnings: portfolioData.totalDailyEarnings || 0,
+          avgAPY: portfolioData.data?.reduce((sum: number, pos: any) => sum + pos.apy, 0) / (portfolioData.data?.length || 1) || 0,
+          positionCount: portfolioData.data?.length || 0
+        });
       }
 
       setError(null);
@@ -135,8 +140,44 @@ export function AdvancedDashboard() {
   }, [address]);
 
   const setupWebSocket = useCallback(() => {
-    // Disable WebSocket for now to prevent errors
-    setIsConnected(false);
+    // Try to establish real WebSocket connection
+    try {
+      const ws = new WebSocket('ws://localhost:3002/ws');
+      
+      ws.onopen = () => {
+        setIsConnected(true);
+        console.log('WebSocket connected');
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'real_time_event') {
+            setRealTimeData(prev => [data, ...prev.slice(0, 9)]);
+          }
+        } catch (err) {
+          console.error('WebSocket message parse error:', err);
+        }
+      };
+      
+      ws.onclose = () => {
+        setIsConnected(false);
+        console.log('WebSocket disconnected');
+      };
+      
+      ws.onerror = () => {
+        setIsConnected(false);
+        console.log('WebSocket error');
+      };
+      
+      return () => {
+        ws.close();
+      };
+    } catch (error) {
+      setIsConnected(false);
+      console.error('WebSocket connection failed:', error);
+      return () => {};
+    }
   }, []);
 
   useEffect(() => {
@@ -150,7 +191,7 @@ export function AdvancedDashboard() {
     };
 
     loadData();
-    setupWebSocket();
+    const cleanup = setupWebSocket();
 
     // Set up periodic updates
     const interval = setInterval(() => {
@@ -160,6 +201,7 @@ export function AdvancedDashboard() {
 
     return () => {
       clearInterval(interval);
+      if (cleanup) cleanup();
       if (wsRef.current) {
         wsRef.current.close();
       }
@@ -524,19 +566,19 @@ export function AdvancedDashboard() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="text-center">
               <div className="text-gray-400 text-sm">Avg APY</div>
-              <div className="text-white text-xl font-bold">{analytics.avgAPY.toFixed(2)}%</div>
+              <div className="text-white text-xl font-bold">{analytics.averageAPY?.toFixed(2) || '0.00'}%</div>
             </div>
             <div className="text-center">
               <div className="text-gray-400 text-sm">24h Volume</div>
-              <div className="text-white text-xl font-bold">{formatCurrency(analytics.totalVolume24h)}</div>
+              <div className="text-white text-xl font-bold">{formatCurrency(analytics.totalVolume24h || 0)}</div>
             </div>
             <div className="text-center">
-              <div className="text-gray-400 text-sm">24h Fees</div>
-              <div className="text-white text-xl font-bold">{formatCurrency(analytics.totalFees24h)}</div>
+              <div className="text-gray-400 text-sm">Top Performers</div>
+              <div className="text-white text-xl font-bold">{analytics.topPerformers?.length || 0}</div>
             </div>
             <div className="text-center">
-              <div className="text-gray-400 text-sm">Healthy Pools</div>
-              <div className="text-white text-xl font-bold">{analytics.healthyPools}/{analytics.poolCount}</div>
+              <div className="text-gray-400 text-sm">Risk Distribution</div>
+              <div className="text-white text-xl font-bold">{analytics.riskDistribution?.low || 0}L/{analytics.riskDistribution?.medium || 0}M/{analytics.riskDistribution?.high || 0}H</div>
             </div>
           </div>
         </div>

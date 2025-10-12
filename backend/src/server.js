@@ -2,7 +2,6 @@ const express = require('express');
 const cors = require('cors');
 const smartAccountRoutes = require('./routes/smart-account');
 const envioRoutes = require('./routes/envio');
-const hyperIndexRoutes = require('./routes/hyperindex');
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -81,46 +80,42 @@ app.get('/api/hyperindex/swaps', (req, res) => {
   });
 });
 
-// Pools real-time endpoint
+// Pools real-time endpoint - returns empty data since no real pools connected
 app.get('/api/pools/real-time', (req, res) => {
-  // Prevent caching
   res.set({
     'Cache-Control': 'no-cache, no-store, must-revalidate',
     'Pragma': 'no-cache',
     'Expires': '0'
   });
   
-  const mockPools = [
-    {
-      address: '0x1234567890123456789012345678901234567890',
-      name: 'USDC/ETH',
-      apy: 12.5,
-      tvl: 2500000,
-      volume24h: 150000,
-      riskScore: 0.25
-    },
-    {
-      address: '0x2345678901234567890123456789012345678901', 
-      name: 'DAI/USDC',
-      apy: 8.3,
-      tvl: 1800000,
-      volume24h: 95000,
-      riskScore: 0.15
-    },
-    {
-      address: '0x3456789012345678901234567890123456789012',
-      name: 'WETH/USDT',
-      apy: 15.7,
-      tvl: 3200000,
-      volume24h: 220000,
-      riskScore: 0.35
-    }
-  ];
+  res.json({
+    success: true,
+    data: [],
+    timestamp: new Date().toISOString(),
+    message: 'No pools connected - Envio indexer offline'
+  });
+});
+
+// Pool analytics endpoint - returns empty data since no real pools connected
+app.get('/api/pools/analytics', (req, res) => {
+  res.set({
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  });
   
   res.json({
     success: true,
-    data: mockPools,
-    timestamp: new Date().toISOString()
+    data: {
+      totalTVL: 0,
+      averageAPY: 0,
+      totalVolume24h: 0,
+      poolCount: 0,
+      riskDistribution: { low: 0, medium: 0, high: 0 },
+      topPerformers: []
+    },
+    timestamp: new Date().toISOString(),
+    message: 'No analytics available - Envio indexer offline'
   });
 });
 
