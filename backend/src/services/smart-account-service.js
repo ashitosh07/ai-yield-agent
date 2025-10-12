@@ -213,6 +213,12 @@ class SmartAccountService {
       .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
   }
   
+  async addAuditEntry(entry) {
+    console.log('📝 Adding audit entry:', entry);
+    this.auditLog.push(entry);
+    return entry;
+  }
+  
   // Simulate AI agent actions for demo
   async simulateAIAction(userAddress) {
     const actions = [

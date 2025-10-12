@@ -119,7 +119,7 @@ export default function Home() {
               <div className="animate-fade-in">
                 {activeTab === 'dashboard' && <SimpleDashboard userAddress={address!} />}
                 {activeTab === 'delegations' && <RealDelegationManager smartAccount={smartAccount} userAddress={address!} />}
-                {activeTab === 'audit' && <AuditLog />}
+                {activeTab === 'audit' && <AuditLog userAddress={address!} />}
                 {activeTab === 'farcaster' && <FarcasterIntegration />}
                 {activeTab === 'envio' && <EnvioRealTime />}
               </div>

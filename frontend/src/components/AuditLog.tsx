@@ -17,9 +17,19 @@ interface AuditEntry {
   amount?: string;
 }
 
-export function AuditLog() {
-  const address = '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b';
-  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
+interface AuditLogProps {
+  userAddress?: string;
+}
+
+export function AuditLog({ userAddress }: AuditLogProps = {}) {
+  const address = userAddress || '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b';
+  const [auditEntries, setAuditEntries] = useState<AuditEntry[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(`audit_${address}`);
+      return stored ? JSON.parse(stored) : [];
+    }
+    return [];
+  });
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [sortBy, setSortBy] = useState('timestamp');
@@ -35,109 +45,91 @@ export function AuditLog() {
   const fetchAuditLog = async () => {
     try {
       console.log('📋 Fetching real audit data for:', address);
-      const response = await fetch(`http://localhost:3002/api/audit/${address}`);
-      const data = await response.json();
       
-      if (data.success) {
-        console.log('✅ Real audit data received:', data.data);
-        setAuditEntries(data.data);
+      // First load from localStorage
+      const stored = localStorage.getItem(`audit_${address}`);
+      if (stored) {
+        const localData = JSON.parse(stored);
+        setAuditEntries(localData);
+      }
+      
+      // Then try to fetch from API
+      const response = await fetch(`http://localhost:3002/api/audit/${address}`);
+      if (response.ok) {
+        const data = await response.json();
+        
+        if (data.success && data.data.length > 0) {
+          console.log('✅ Real audit data received:', data.data);
+          setAuditEntries(data.data);
+          localStorage.setItem(`audit_${address}`, JSON.stringify(data.data));
+        } else {
+          console.log('📋 No audit data from API, using local data');
+        }
       } else {
-        console.warn('⚠️ API returned error:', data.error);
-        setAuditEntries([]);
+        console.log('📋 API not available, using local data');
       }
     } catch (error) {
-      console.error('❌ Error fetching audit log:', error);
-      setAuditEntries([]);
+      console.log('📋 API error, using local data:', error.message);
     } finally {
       setLoading(false);
     }
   };
   
   const simulateAIAction = async () => {
+    const newEntry: AuditEntry = {
+      id: Date.now().toString(),
+      action: 'analysis',
+      details: {
+        trigger: 'Manual simulation',
+        poolsAnalyzed: 3,
+        recommendation: 'Rebalance to WETH/USDT pool for +2.1% APY improvement',
+        confidence: 0.89
+      },
+      confidence: 0.89,
+      status: 'success',
+      timestamp: new Date().toISOString()
+    };
+    
+    const updatedEntries = [newEntry, ...auditEntries];
+    setAuditEntries(updatedEntries);
+    localStorage.setItem(`audit_${address}`, JSON.stringify(updatedEntries));
+    
+    // Also try to send to API
     try {
-      await fetch(`http://localhost:3002/api/audit/${address}/simulate`, {
-        method: 'POST'
+      await fetch('http://localhost:3002/api/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...newEntry,
+          userAddress: address
+        })
       });
-      // Refresh audit log after simulation
-      fetchAuditLog();
     } catch (error) {
-      console.error('Error simulating AI action:', error);
+      console.log('Could not send to API:', error.message);
     }
   };
 
-  const getMockAuditData = (): AuditEntry[] => {
-    return [
-      {
-        id: '1',
-        action: 'rebalance',
-        details: {
-          rationale: 'WETH/USDT APY increased from 8.2% to 16.5%, moving 1.5 ETH for 4% improvement'
-        },
-        txHash: '0x1234567890abcdef1234567890abcdef12345678',
-        confidence: 0.87,
-        status: 'success',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        gasUsed: '0.0023',
-        gasPrice: '20',
-        fromPool: 'USDC/ETH',
-        toPool: 'WETH/USDT',
-        amount: '1.5'
-      },
-      {
-        id: '2',
-        action: 'delegation_created',
-        details: {
-          maxAmount: '2.5 ETH',
-          expiry: '24 hours',
-          poolCount: 3
-        },
-        txHash: '0xabcdef1234567890abcdef1234567890abcdef12',
-        status: 'success',
-        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
-        gasUsed: '0.0045',
-        gasPrice: '22'
-      },
-      {
-        id: '3',
-        action: 'analysis',
-        details: {
-          trigger: 'Pool APY change detected',
-          poolsAnalyzed: 3,
-          recommendation: 'No action - insufficient improvement'
-        },
-        confidence: 0.65,
-        status: 'success',
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
-      },
-      {
-        id: '4',
-        action: 'rebalance',
-        details: {
-          rationale: 'Moving from DAI/USDC to USDC/ETH for better risk-adjusted returns'
-        },
-        txHash: '0x9876543210fedcba9876543210fedcba98765432',
-        confidence: 0.92,
-        status: 'success',
-        timestamp: new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString(),
-        gasUsed: '0.0019',
-        gasPrice: '18',
-        fromPool: 'DAI/USDC',
-        toPool: 'USDC/ETH',
-        amount: '0.8'
-      },
-      {
-        id: '5',
-        action: 'user_rejection',
-        details: {
-          rejectedAction: 'Rebalance to high-risk pool',
-          reason: 'User rejected via Farcaster mini app'
-        },
-        confidence: 0.73,
-        status: 'failed',
-        timestamp: new Date(Date.now() - 18 * 60 * 60 * 1000).toISOString()
-      }
-    ];
+  // Add real audit entry function
+  const addAuditEntry = (entry: Omit<AuditEntry, 'id' | 'timestamp'>) => {
+    const newEntry: AuditEntry = {
+      ...entry,
+      id: Date.now().toString(),
+      timestamp: new Date().toISOString()
+    };
+    
+    const updatedEntries = [newEntry, ...auditEntries];
+    setAuditEntries(updatedEntries);
+    localStorage.setItem(`audit_${address}`, JSON.stringify(updatedEntries));
+    
+    return newEntry;
   };
+  
+  // Expose function globally for other components to use
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      (window as any).addAuditEntry = addAuditEntry;
+    }
+  }, [auditEntries, address]);
 
   const filteredEntries = auditEntries.filter(entry => {
     if (filter === 'all') return true;

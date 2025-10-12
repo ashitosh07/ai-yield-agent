@@ -133,24 +133,29 @@ export default function RealDelegationManager({ smartAccount, userAddress }: Rea
     }
     
     // Log revocation to audit trail
-    try {
-      await fetch('http://localhost:3002/api/audit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'delegation_revoked',
-          details: {
-            delegationId,
-            reason: 'User revoked delegation'
-          },
-          status: 'success',
-          userAddress,
-          timestamp: new Date().toISOString()
-        })
-      });
-    } catch (auditError) {
-      console.warn('Failed to log delegation revocation to audit:', auditError);
+    const auditEntry = {
+      action: 'delegation_revoked' as const,
+      details: {
+        delegationId,
+        reason: 'User manually revoked delegation'
+      },
+      status: 'success' as const
+    };
+    
+    // Add to localStorage audit log
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(`audit_${userAddress}`) || '[]';
+      const auditEntries = JSON.parse(stored);
+      const newEntry = {
+        ...auditEntry,
+        id: Date.now().toString(),
+        timestamp: new Date().toISOString()
+      };
+      auditEntries.unshift(newEntry);
+      localStorage.setItem(`audit_${userAddress}`, JSON.stringify(auditEntries));
     }
+    
+    console.log('✅ Revocation audit entry added to localStorage');
   };
 
   return (

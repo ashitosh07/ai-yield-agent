@@ -122,15 +122,61 @@ app.get('/api/audit/:address', async (req, res) => {
   }
 });
 
+// Create audit entry endpoint
+app.post('/api/audit', async (req, res) => {
+  const { action, details, status, userAddress, txHash, confidence } = req.body;
+  
+  try {
+    const auditEntry = {
+      id: Date.now().toString(),
+      action,
+      details,
+      status,
+      userAddress,
+      txHash,
+      confidence,
+      timestamp: new Date().toISOString()
+    };
+    
+    await app.locals.smartAccountService.addAuditEntry(auditEntry);
+    
+    res.json({
+      success: true,
+      data: auditEntry,
+      message: 'Audit entry created'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
 // Simulate AI action endpoint for demo
 app.post('/api/audit/:address/simulate', async (req, res) => {
   const { address } = req.params;
   
   try {
-    await app.locals.smartAccountService.simulateAIAction(address);
+    const simulatedEntry = {
+      id: Date.now().toString(),
+      action: 'analysis',
+      details: {
+        trigger: 'Manual simulation',
+        poolsAnalyzed: 3,
+        recommendation: 'Rebalance to WETH/USDT for +2.1% APY improvement'
+      },
+      confidence: 0.89,
+      status: 'success',
+      userAddress: address,
+      timestamp: new Date().toISOString()
+    };
+    
+    await app.locals.smartAccountService.addAuditEntry(simulatedEntry);
     
     res.json({
       success: true,
+      data: simulatedEntry,
       message: 'AI action simulated'
     });
   } catch (error) {
