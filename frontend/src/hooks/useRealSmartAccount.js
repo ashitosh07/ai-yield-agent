@@ -7,6 +7,7 @@ export function useRealSmartAccount() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [balance, setBalance] = useState('0');
+  const [userAddress, setUserAddress] = useState(null);
 
   const initializeSmartAccount = useCallback(async (userAddress) => {
     try {
@@ -19,6 +20,7 @@ export function useRealSmartAccount() {
       
       setSmartAccount(result.account);
       setIsDeployed(result.deployed);
+      setUserAddress(userAddress);
       
       // Get balance
       const accountInfo = await realSmartAccountService.getAccountInfo();
@@ -62,11 +64,19 @@ export function useRealSmartAccount() {
         || '1000000000000000000' // 1 token
       );
       
+      console.log('Hook - stored userAddress:', userAddress);
+      console.log('Hook - smartAccount:', smartAccount);
+      
+      if (!userAddress) {
+        throw new Error('User address not available. Please initialize smart account first.');
+      }
+      
       const result = await realSmartAccountService.createDelegation({
         delegate: delegationParams.delegate,
         tokenAddress,
         maxAmount,
-        expiry: delegationParams.expiry
+        expiry: delegationParams.expiry,
+        userAddress
       });
       
       console.log('✅ Real delegation created successfully:', result.hash);

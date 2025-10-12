@@ -1,4 +1,9 @@
-import { createPublicClient, createWalletClient, http, custom, parseEther, encodeFunctionData } from 'viem';
+import { createPublicClient, createWalletClient, http, custom } from 'viem';
+import { 
+  Implementation, 
+  toMetaMaskSmartAccount, 
+  createDelegation
+} from '@metamask/delegation-toolkit';
 import { monadTestnet } from './chains';
 
 export class RealSmartAccountService {
@@ -36,8 +41,8 @@ export class RealSmartAccountService {
         });
       }
 
-      // Deploy or get existing smart account address
-      this.smartAccountAddress = await this.deploySmartAccount();
+      // Use user address as smart account address for simplicity
+      this.smartAccountAddress = userAddress;
 
       console.log('✅ Real Smart Account initialized:', {
         userAddress,
@@ -62,13 +67,10 @@ export class RealSmartAccountService {
   }
 
   private async deploySmartAccount(): Promise<string> {
-    // For now, use CREATE2 deterministic address generation
-    // In production, this would deploy actual smart account contract
-    const salt = this.userAddress.slice(2, 10); // Use part of user address as salt
-    const smartAccountAddress = `0x${this.userAddress.slice(2, 10)}${'0'.repeat(32)}${salt}`;
-    
-    console.log('📝 Smart Account address generated:', smartAccountAddress);
-    return smartAccountAddress;
+    // Return the user address as the smart account address for now
+    // In production, this would be the actual deployed smart account address
+    console.log('📝 Using user address as smart account:', this.userAddress);
+    return this.userAddress;
   }
 
   private async isDeployed(): Promise<boolean> {
@@ -87,9 +89,18 @@ export class RealSmartAccountService {
     tokenAddress: string;
     maxAmount: bigint;
     expiry?: number;
+    userAddress: string;
   }) {
     try {
-      console.log('🔄 Creating real delegation with MetaMask:', params);
+      console.log('🔄 Creating delegation with MetaMask Delegation Toolkit:', params);
+
+      const userAddress = params.userAddress;
+      console.log('Received userAddress:', userAddress, typeof userAddress);
+      
+      if (!userAddress || typeof userAddress !== 'string' || !userAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+        console.error('Invalid userAddress:', userAddress);
+        throw new Error(`Valid user address is required. Received: ${userAddress}`);
+      }
 
       if (!window.ethereum || !window.ethereum.isMetaMask) {
         throw new Error('MetaMask not found');
@@ -104,88 +115,103 @@ export class RealSmartAccountService {
 
       // Ensure we're on Monad Testnet
       const chainId = await ethereum.request({ method: 'eth_chainId' });
-      if (chainId !== '0x279F') {
-        try {
-          await ethereum.request({
-            method: 'wallet_switchEthereumChain',
-            params: [{ chainId: '0x279F' }]
-          });
-        } catch (switchError: any) {
-          if (switchError.code === 4902) {
-            await ethereum.request({
-              method: 'wallet_addEthereumChain',
-              params: [{
-                chainId: '0x279F',
-                chainName: 'Monad Testnet',
-                nativeCurrency: { name: 'Monad', symbol: 'MON', decimals: 18 },
-                rpcUrls: ['https://testnet-rpc.monad.xyz'],
-                blockExplorerUrls: ['https://testnet.monadexplorer.com']
-              }]
-            });
-          } else {
-            throw new Error('Please switch to Monad Testnet in MetaMask');
-          }
-        }
+      if (chainId.toLowerCase() !== '0x279f') {
+        throw new Error('Please switch to Monad Testnet in MetaMask');
       }
 
-      const expiry = params.expiry || Math.floor(Date.now() / 1000) + 86400;
+      console.log('Using user address:', userAddress);
 
-      // Create EIP-712 structured data for delegation
-      const domain = {
-        name: 'AI Yield Agent',
-        version: '1',
-        chainId: 10143,
-        verifyingContract: this.smartAccountAddress
-      };
-
-      const types = {
-        EIP712Domain: [
-          { name: 'name', type: 'string' },
-          { name: 'version', type: 'string' },
-          { name: 'chainId', type: 'uint256' },
-          { name: 'verifyingContract', type: 'address' }
-        ],
-        Delegation: [
-          { name: 'delegate', type: 'address' },
-          { name: 'tokenAddress', type: 'address' },
-          { name: 'maxAmount', type: 'uint256' },
-          { name: 'expiry', type: 'uint256' },
-          { name: 'nonce', type: 'uint256' }
-        ]
-      };
-
-      const nonce = Date.now();
-      const message = {
-        delegate: params.delegate,
-        tokenAddress: params.tokenAddress,
-        maxAmount: params.maxAmount.toString(),
-        expiry: expiry.toString(),
-        nonce: nonce.toString()
-      };
-
-      const typedData = {
-        types,
-        primaryType: 'Delegation',
-        domain,
-        message
-      };
-
-      // Sign with MetaMask using EIP-712
-      const signature = await ethereum.request({
-        method: 'eth_signTypedData_v4',
-        params: [this.userAddress, JSON.stringify(typedData)]
+      // Create wallet client for signing
+      const walletClient = createWalletClient({
+        chain: monadTestnet,
+        transport: custom(ethereum)
       });
 
-      const delegation = {
-        ...message,
-        signature,
-        hash: `0x${nonce.toString(16).padStart(64, '0')}`
+      // Create a proper account object with signing capabilities
+      const signerAccount = {
+        address: userAddress as `0x${string}`,
+        type: 'json-rpc' as const,
+        signMessage: async ({ message }: { message: string | Uint8Array }) => {
+          const messageToSign = typeof message === 'string' ? message : new TextDecoder().decode(message);
+          return await ethereum.request({
+            method: 'personal_sign',
+            params: [messageToSign, userAddress]
+          });
+        },
+        signTypedData: async (typedData: any) => {
+          // Convert BigInt values to strings for JSON serialization
+          const serializableTypedData = JSON.parse(JSON.stringify(typedData, (key, value) => 
+            typeof value === 'bigint' ? value.toString() : value
+          ));
+          
+          return await ethereum.request({
+            method: 'eth_signTypedData_v4',
+            params: [userAddress, JSON.stringify(serializableTypedData)]
+          });
+        }
       };
 
-      console.log('✅ Real delegation signed with MetaMask:', delegation.hash);
-      return { delegation, hash: delegation.hash };
+      // Create MetaMask smart account for the delegator
+      const delegatorSmartAccount = await toMetaMaskSmartAccount({
+        client: this.publicClient,
+        implementation: Implementation.Hybrid,
+        deployParams: [userAddress as `0x${string}`, [], [], []],
+        deploySalt: '0x0000000000000000000000000000000000000000000000000000000000000000',
+        signer: { account: signerAccount }
+      });
+
+      // Create delegation using the toolkit
+      const delegation = createDelegation({
+        to: params.delegate as `0x${string}`,
+        from: delegatorSmartAccount.address,
+        environment: delegatorSmartAccount.environment,
+        scope: {
+          type: 'erc20TransferAmount',
+          tokenAddress: params.tokenAddress as `0x${string}`,
+          maxAmount: params.maxAmount
+        }
+      });
+
+      // Sign the delegation
+      const signature = await delegatorSmartAccount.signDelegation({
+        delegation
+      });
+
+      const signedDelegation = {
+        ...delegation,
+        signature
+      };
+
+      console.log('✅ Delegation created with toolkit:', signedDelegation);
+      
+      // Log to audit trail
+      try {
+        await fetch('http://localhost:3002/api/audit', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'delegation_created',
+            details: {
+              delegate: params.delegate,
+              tokenAddress: params.tokenAddress,
+              maxAmount: params.maxAmount.toString(),
+              expiry: new Date((params.expiry || Math.floor(Date.now() / 1000) + 86400) * 1000).toLocaleString()
+            },
+            status: 'success',
+            userAddress,
+            timestamp: new Date().toISOString()
+          })
+        });
+      } catch (auditError) {
+        console.warn('Failed to log delegation creation to audit:', auditError);
+      }
+      
+      return { 
+        delegation: signedDelegation, 
+        hash: `0x${Date.now().toString(16).padStart(64, '0')}` 
+      };
     } catch (error) {
-      console.error('❌ Real delegation creation failed:', error);
+      console.error('❌ Delegation creation failed:', error);
       throw error;
     }
   }
@@ -213,54 +239,37 @@ export class RealSmartAccountService {
     value: bigint = 0n
   ) {
     try {
-      console.log('🔄 Executing real delegation with MetaMask');
+      console.log('🔄 Executing delegation with toolkit');
 
       if (!window.ethereum || !window.ethereum.isMetaMask) {
         throw new Error('MetaMask not found');
       }
 
-      // Get MetaMask provider
-      let ethereum = window.ethereum;
-      if (window.ethereum.providers) {
-        ethereum = window.ethereum.providers.find((p: any) => p.isMetaMask);
-        if (!ethereum) throw new Error('MetaMask not found among providers');
-      }
-
-      // Ensure we're on Monad Testnet
-      const chainId = await ethereum.request({ method: 'eth_chainId' });
-      if (chainId !== '0x279F') {
-        throw new Error('Please switch to Monad Testnet in MetaMask');
-      }
-
+      // For now, simulate execution by sending a regular transaction
+      // In production, this would use the DelegationManager contract
+      
       // Validate delegation
-      if (parseInt(signedDelegation.expiry) < Math.floor(Date.now() / 1000)) {
-        throw new Error('Delegation expired');
+      if (signedDelegation.scope && signedDelegation.scope.maxAmount) {
+        if (value > BigInt(signedDelegation.scope.maxAmount)) {
+          throw new Error('Execution value exceeds delegation limit');
+        }
       }
 
-      // Estimate gas first
-      const gasEstimate = await this.publicClient.estimateGas({
-        account: this.userAddress as `0x${string}`,
-        to: target as `0x${string}`,
-        data: data as `0x${string}`,
-        value
-      });
-
-      // Use MetaMask directly for transaction with optimized gas
-      const txHash = await ethereum.request({
+      // Use MetaMask directly for transaction
+      const userOperationHash = await ethereum.request({
         method: 'eth_sendTransaction',
         params: [{
           from: this.userAddress,
           to: target,
           data: data,
-          value: `0x${value.toString(16)}`,
-          gas: `0x${(gasEstimate * 110n / 100n).toString(16)}` // 10% buffer
+          value: `0x${value.toString(16)}`
         }]
       });
 
-      console.log('✅ Real delegation executed via MetaMask:', txHash);
-      return txHash;
+      console.log('✅ Delegation executed via MetaMask:', userOperationHash);
+      return userOperationHash;
     } catch (error) {
-      console.error('❌ Real delegation execution failed:', error);
+      console.error('❌ Delegation execution failed:', error);
       throw error;
     }
   }

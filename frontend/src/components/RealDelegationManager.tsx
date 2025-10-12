@@ -54,7 +54,13 @@ export default function RealDelegationManager({ smartAccount, userAddress }: Rea
         .catch(console.error);
     }
   }, [userAddress, isInitialized, initializeSmartAccount]);
-  const [delegations, setDelegations] = useState<any[]>([]);
+  const [delegations, setDelegations] = useState<any[]>(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem(`delegations_${userAddress}`);
+      return stored ? JSON.parse(stored) : [];
+    }
+    return [];
+  });
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [formData, setFormData] = useState({
     delegate: '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b', // AI Agent address
@@ -83,10 +89,20 @@ export default function RealDelegationManager({ smartAccount, userAddress }: Rea
         ...result.delegation,
         id: Date.now(),
         status: 'active',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        delegate: formData.delegate,
+        tokenAddress: formData.tokenAddress,
+        maxAmount: formData.maxAmount,
+        expiry: formData.expiry
       };
 
-      setDelegations(prev => [...prev, newDelegation]);
+      const updatedDelegations = [...delegations, newDelegation];
+      setDelegations(updatedDelegations);
+      
+      // Store in localStorage
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(`delegations_${userAddress}`, JSON.stringify(updatedDelegations));
+      }
       setShowCreateForm(false);
       
       // Reset form
@@ -103,13 +119,38 @@ export default function RealDelegationManager({ smartAccount, userAddress }: Rea
 
   const handleRevokeDelegation = async (delegationId: number) => {
     // In a real implementation, this would call a revoke function
-    setDelegations(prev => 
-      prev.map(d => 
-        d.id === delegationId 
-          ? { ...d, status: 'revoked' }
-          : d
-      )
+    const updatedDelegations = delegations.map(d => 
+      d.id === delegationId 
+        ? { ...d, status: 'revoked' }
+        : d
     );
+    
+    setDelegations(updatedDelegations);
+    
+    // Store in localStorage
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`delegations_${userAddress}`, JSON.stringify(updatedDelegations));
+    }
+    
+    // Log revocation to audit trail
+    try {
+      await fetch('http://localhost:3002/api/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'delegation_revoked',
+          details: {
+            delegationId,
+            reason: 'User revoked delegation'
+          },
+          status: 'success',
+          userAddress,
+          timestamp: new Date().toISOString()
+        })
+      });
+    } catch (auditError) {
+      console.warn('Failed to log delegation revocation to audit:', auditError);
+    }
   };
 
   return (
