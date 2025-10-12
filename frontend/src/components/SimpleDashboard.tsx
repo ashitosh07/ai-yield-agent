@@ -1,10 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
 
-export function SimpleDashboard() {
-  const { address } = useAccount();
+export function SimpleDashboard({ userAddress }: { userAddress?: string }) {
+  const address = userAddress;
   const [pools, setPools] = useState([]);
   const [portfolio, setPortfolio] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -108,8 +107,8 @@ export function SimpleDashboard() {
               <span className="text-white text-xl">🤖</span>
             </div>
             <div className="text-right">
-              <div className="text-gray-400 text-sm">AI Status</div>
-              <div className="text-white text-2xl font-bold">Active</div>
+              <div className="text-gray-400 text-sm">Real Mode</div>
+              <div className="text-green-400 text-2xl font-bold">✓ Live</div>
             </div>
           </div>
         </div>

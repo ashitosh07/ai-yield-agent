@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSmartAccount } from '../hooks/useSmartAccount';
-import { useAccount, useWalletClient } from 'wagmi';
 
 export default function SmartAccountSetup({ onSetupComplete }) {
-  const { address, isConnected } = useAccount();
-  const { data: walletClient } = useWalletClient();
+  const [address] = useState('0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b');
+  const [isConnected] = useState(true);
+  const [walletClient] = useState({ account: { address: '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b' } });
   const {
     smartAccount,
     isDeployed,

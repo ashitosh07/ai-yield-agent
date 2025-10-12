@@ -1,27 +1,36 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount, useConnect, useDisconnect } from 'wagmi';
-import SmartAccountSetup from '../components/SmartAccountSetup';
-import DelegationManager from '../components/DelegationManager';
+import RealSmartAccountSetup from '../components/RealSmartAccountSetup';
+import RealDelegationManager from '../components/RealDelegationManager';
 import { YieldDashboard } from '../components/YieldDashboard';
 import { AuditLog } from '../components/AuditLog';
-import { ConnectWallet } from '../components/ConnectWallet';
+import { SimpleConnectWallet } from '../components/SimpleConnectWallet';
 import { FarcasterIntegration } from '../components/FarcasterIntegration';
 import { EnvioRealTime } from '../components/EnvioRealTime';
 import { SimpleDashboard } from '../components/SimpleDashboard';
 import { ClientOnly } from '../components/ClientOnly';
+import { RealWalletConnect } from '../components/RealWalletConnect';
 
 export default function Home() {
-  const { address, isConnected } = useAccount();
-  const { disconnect } = useDisconnect();
+  const [address, setAddress] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [smartAccount, setSmartAccount] = useState(null);
   const [smartAccountAddress, setSmartAccountAddress] = useState(null);
   const [setupComplete, setSetupComplete] = useState(false);
+  
+  const isConnected = !!address;
+  
+  const disconnect = () => {
+    setAddress(null);
+  };
+  
+  const handleConnect = (walletAddress: string) => {
+    setAddress(walletAddress);
+  };
 
   if (!isConnected) {
-    return <ConnectWallet />;
+    return <RealWalletConnect onConnect={handleConnect} />;
   }
 
   return (
@@ -66,10 +75,11 @@ export default function Home() {
         </nav>
 
         <div className="container mx-auto px-6 py-8">
-          {/* Smart Account Setup */}
+          {/* Real Smart Account Setup */}
           {!setupComplete && (
             <div className="mb-8">
-              <SmartAccountSetup 
+              <RealSmartAccountSetup 
+                userAddress={address!}
                 onSetupComplete={(account, address) => {
                   setSmartAccount(account);
                   setSmartAccountAddress(address);
@@ -107,8 +117,8 @@ export default function Home() {
 
               {/* Content with animations */}
               <div className="animate-fade-in">
-                {activeTab === 'dashboard' && <SimpleDashboard />}
-                {activeTab === 'delegations' && <DelegationManager smartAccount={smartAccount} />}
+                {activeTab === 'dashboard' && <SimpleDashboard userAddress={address!} />}
+                {activeTab === 'delegations' && <RealDelegationManager smartAccount={smartAccount} userAddress={address!} />}
                 {activeTab === 'audit' && <AuditLog />}
                 {activeTab === 'farcaster' && <FarcasterIntegration />}
                 {activeTab === 'envio' && <EnvioRealTime />}
@@ -116,21 +126,7 @@ export default function Home() {
             </>
           )}
           
-          {/* Show setup completion button if not complete */}
-          {!setupComplete && (
-            <div className="mb-8 text-center">
-              <button
-                onClick={() => {
-                  setSmartAccount({ address: '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b' });
-                  setSmartAccountAddress('0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b');
-                  setSetupComplete(true);
-                }}
-                className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
-              >
-                Skip Setup & Show Full UI
-              </button>
-            </div>
-          )}
+
         </div>
       </div>
     </ClientOnly>

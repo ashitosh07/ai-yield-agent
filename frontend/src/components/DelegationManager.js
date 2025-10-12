@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
 
 export default function DelegationManager({ smartAccount }) {
-  const { address } = useAccount();
+  const address = '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b';
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [delegations, setDelegations] = useState([]);

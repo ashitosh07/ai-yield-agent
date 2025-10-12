@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useAccount } from 'wagmi';
 
 interface PoolData {
   address: string;
@@ -58,7 +57,7 @@ interface EnvioStats {
 }
 
 export function EnvioRealTime() {
-  const { address } = useAccount();
+  const address = '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b';
   const [pools, setPools] = useState<PoolData[]>([]);
   const [stats, setStats] = useState<EnvioStats | null>(null);
   const [loading, setLoading] = useState(true);

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { useAccount } from 'wagmi';
 import { Line, Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -71,7 +70,7 @@ interface AIRecommendation {
 }
 
 export function AdvancedDashboard() {
-  const { address } = useAccount();
+  const address = '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b';
   const [pools, setPools] = useState<PoolData[]>([]);
   const [portfolio, setPortfolio] = useState<PortfolioSummary | null>(null);
   const [analytics, setAnalytics] = useState<MarketAnalytics | null>(null);

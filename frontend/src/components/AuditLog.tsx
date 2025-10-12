@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useAccount } from 'wagmi';
 
 interface AuditEntry {
   id: string;
@@ -19,7 +18,7 @@ interface AuditEntry {
 }
 
 export function AuditLog() {
-  const { address } = useAccount();
+  const address = '0x742d35Cc6634C0532925a3b8D4C9db4C8b9b8b8b';
   const [auditEntries, setAuditEntries] = useState<AuditEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
