@@ -480,7 +480,7 @@ export function AdvancedDashboard() {
                         {rec.from_pool} → {rec.to_pool}
                       </div>
                       <div className="text-gray-400 text-sm">
-                        Amount: {rec.amount.toFixed(3)} ETH
+                        Amount: {Number(rec.amount).toFixed(3)} ETH
                       </div>
                     </div>
                   </div>

@@ -80,7 +80,7 @@ app.get('/api/hyperindex/swaps', (req, res) => {
   });
 });
 
-// Pools real-time endpoint - returns empty data since no real pools connected
+// Pools real-time endpoint - no data available without Envio indexer
 app.get('/api/pools/real-time', (req, res) => {
   res.set({
     'Cache-Control': 'no-cache, no-store, must-revalidate',
@@ -89,10 +89,10 @@ app.get('/api/pools/real-time', (req, res) => {
   });
   
   res.json({
-    success: true,
+    success: false,
     data: [],
     timestamp: new Date().toISOString(),
-    message: 'No pools connected - Envio indexer offline'
+    error: 'Envio indexer not running - install WSL and run envio dev'
   });
 });
 
@@ -254,7 +254,7 @@ app.get('/health', (req, res) => {
   res.json({ status: 'OK', timestamp: new Date().toISOString() });
 });
 
-// Create a global instance for shared state
+// Create global instances for shared state
 const SmartAccountService = require('./services/smart-account-service');
 const globalSmartAccountService = new SmartAccountService();
 app.locals.smartAccountService = globalSmartAccountService;

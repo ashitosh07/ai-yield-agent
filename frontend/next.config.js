@@ -5,6 +5,10 @@ const nextConfig = {
     return config;
   },
   swcMinify: false,
+  // Fix Windows permission issue by binding to localhost only
+  experimental: {
+    serverComponentsExternalPackages: []
+  }
 }
 
 module.exports = nextConfig

@@ -16,13 +16,13 @@ start_all.bat
 
 ### 2. Open Main Application
 ```
-http://localhost:3000
+http://localhost:3001
 ```
 
 ## 🎯 **Priority 1: Envio HyperIndex Testing**
 
 ### ✅ **Frontend Integration Test**
-1. Open http://localhost:3000
+1. Open http://localhost:3001
 2. Connect wallet (any address works)
 3. Navigate to **"Envio" tab** (⚡)
 4. Verify you see:
@@ -63,7 +63,7 @@ dir envio\src\EventHandlers.ts
 ## 🎭 **Priority 2: Farcaster Mini App Testing**
 
 ### ✅ **Frontend Integration Test**
-1. Open http://localhost:3000
+1. Open http://localhost:3001
 2. Navigate to **"Social" tab** (🎭)
 3. Test share buttons:
    - Click "📊 Share Portfolio Frame"
@@ -100,7 +100,7 @@ curl -I http://localhost:3006/api/frame/delegate-image
 ## 🤖 **Core Application Testing**
 
 ### ✅ **Wallet Connection Test**
-1. Open http://localhost:3000
+1. Open http://localhost:3001
 2. Click "Connect MetaMask"
 3. Should show wallet connection interface
 4. Any address works for demo
@@ -226,7 +226,7 @@ cd agent && python main.py
 ## 🏆 **Demo Flow (5 Minutes)**
 
 ### **Scene 1: Envio Integration (60s)**
-1. Open http://localhost:3000
+1. Open http://localhost:3001
 2. Show **Envio tab** with real-time indexing
 3. Navigate to **Dashboard** - point out Envio status
 4. Highlight "Powered by Envio HyperIndex" on pools

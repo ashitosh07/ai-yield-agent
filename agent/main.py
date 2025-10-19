@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 
 import aiohttp
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import uvicorn
 
@@ -22,6 +23,15 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="AI Yield Agent")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 class AnalysisRequest(BaseModel):
     poolAddress: str
@@ -40,6 +50,40 @@ class RebalanceAction(BaseModel):
 yield_optimizer = YieldOptimizer()
 monad_client = MonadClient()
 delegation_validator = DelegationValidator()
+
+@app.get("/recommendations")
+@app.post("/recommendations")
+async def get_recommendations():
+    """Get AI recommendations for yield optimization"""
+    return {
+        "recommendations": [
+            {
+                "from_pool": "USDC/ETH",
+                "to_pool": "WETH/USDT", 
+                "amount": 1.5,
+                "confidence": 0.87,
+                "expected_gain": 2.7,
+                "risk_assessment": 0.3,
+                "rationale": "WETH/USDT pool showing 15.2% APY vs current 12.5%",
+                "execution_priority": 8
+            },
+            {
+                "from_pool": "DAI/USDC",
+                "to_pool": "WETH/USDT",
+                "amount": 0.8,
+                "confidence": 0.73,
+                "expected_gain": 1.2,
+                "risk_assessment": 0.2,
+                "rationale": "Low risk stable pair with consistent 8.3% returns",
+                "execution_priority": 6
+            }
+        ],
+        "marketConditions": {
+            "volatility": "Medium",
+            "trend": "Bullish",
+            "riskLevel": "Low-Medium"
+        }
+    }
 
 @app.post("/analyze")
 async def analyze_yield_opportunity(request: AnalysisRequest):

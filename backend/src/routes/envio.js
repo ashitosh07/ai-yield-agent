@@ -11,6 +11,11 @@ const envioService = new EnvioService();
 router.get('/stats', async (req, res) => {
   try {
     const stats = await envioService.getIndexerStats();
+    res.set({
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      'Pragma': 'no-cache',
+      'Expires': '0'
+    });
     res.json({
       success: true,
       data: stats,
